@@ -100,7 +100,7 @@ export function Configuracoes() {
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-brand-dark mb-2">Configurações da Empresa</h1>
+        <h1 className="text-2xl font-bold text-brand-dark mb-2">Configurações da Conta</h1>
         <p className="text-sm text-slate-500">Personalize as informações que aparecerão nas suas propostas.</p>
       </div>
 

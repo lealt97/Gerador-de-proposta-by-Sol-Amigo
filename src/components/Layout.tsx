@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Sun, LayoutDashboard, Users, FileText, PlusCircle, PenTool, Settings, LogOut } from "lucide-react";
+import { Sun, LayoutDashboard, Users, FileText, PlusCircle, PenTool, Settings, LogOut, Menu } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/Button";
 
@@ -7,6 +8,7 @@ export function Layout() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   
   const handleLogout = async () => {
     await signOut();
@@ -19,7 +21,7 @@ export function Layout() {
     { path: '/propostas', label: 'Propostas', icon: FileText },
     { path: '/propostas/nova', label: 'Nova Proposta', icon: PlusCircle },
     { path: '/design-pdf', label: 'Design PDF', icon: PenTool },
-    { path: '/configuracoes', label: 'Configurações', icon: Settings },
+    { path: '/configuracoes', label: 'Configurações da Conta', icon: Settings },
   ];
 
   const getPageTitle = () => {
@@ -29,15 +31,17 @@ export function Layout() {
 
   return (
     <div className="flex h-screen w-full bg-brand-gray text-brand-dark font-sans overflow-hidden">
-      <aside className="w-64 border-r border-brand-border bg-brand-surface flex flex-col shrink-0">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center text-white font-bold">
+      <aside className={`${isSidebarExpanded ? "w-64" : "w-20"} transition-all duration-300 border-r border-brand-border bg-brand-surface flex flex-col shrink-0`}>
+        <div className={`p-6 ${isSidebarExpanded ? "" : "px-4"}`}>
+          <div className={`flex items-center gap-2 mb-8 ${!isSidebarExpanded ? "justify-center" : ""}`}>
+            <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center text-white font-bold shrink-0">
               <Sun className="h-5 w-5" />
             </div>
-            <h1 className="text-lg font-semibold tracking-tight text-brand-dark">
-              SolAmigo <span className="text-brand-blue">Pro</span>
-            </h1>
+            {isSidebarExpanded && (
+              <h1 className="text-lg font-semibold tracking-tight text-brand-dark whitespace-nowrap">
+                SolAmigo <span className="text-brand-blue">Pro</span>
+              </h1>
+            )}
           </div>
           <nav className="space-y-1">
             {navItems.map((item) => {
@@ -47,31 +51,36 @@ export function Layout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                  className={`flex items-center overflow-hidden rounded-md transition-colors ${
+                    isSidebarExpanded ? "gap-3 px-3 py-2" : "justify-center p-2"
+                  } ${
                     isActive
                       ? "bg-gray-50 text-brand-dark"
                       : "text-slate-500 hover:text-brand-dark hover:bg-gray-50/50"
                   }`}
+                  title={!isSidebarExpanded ? item.label : undefined}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? "opacity-100 text-brand-blue" : "opacity-70"}`} />
-                  {item.label}
+                  <Icon className={`w-5 h-5 shrink-0 ${isActive ? "opacity-100 text-brand-blue" : "opacity-70"}`} />
+                  {isSidebarExpanded && <span className="truncate">{item.label}</span>}
                 </Link>
               );
             })}
           </nav>
         </div>
-        <div className="mt-auto p-4 border-t border-brand-border space-y-4">
-          <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+        <div className={`mt-auto p-4 border-t border-brand-border space-y-4 ${!isSidebarExpanded ? "px-2" : ""}`}>
+          <div className={`bg-gray-50 rounded-lg flex items-center ${isSidebarExpanded ? "p-3 gap-3" : "p-2 flex-col gap-2 justify-center"}`}>
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-blue to-brand-blue-hover flex items-center justify-center text-xs font-bold text-white uppercase shrink-0">
               {user?.user_metadata?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
             </div>
-            <div className="overflow-hidden flex-1">
-              <p className="text-xs font-medium text-brand-dark truncate">{user?.user_metadata?.name || 'Usuário'}</p>
-              <p className="text-[10px] text-slate-500 truncate">{user?.user_metadata?.company_name || 'SolAmigo Pro'}</p>
-            </div>
+            {isSidebarExpanded && (
+              <div className="overflow-hidden flex-1">
+                <p className="text-xs font-medium text-brand-dark truncate">{user?.user_metadata?.name || 'Usuário'}</p>
+                <p className="text-[10px] text-slate-500 truncate">{user?.user_metadata?.company_name || 'SolAmigo Pro'}</p>
+              </div>
+            )}
             <button 
               onClick={handleLogout}
-              className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors shrink-0"
+              className={`p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors shrink-0 ${!isSidebarExpanded ? "w-full flex justify-center" : ""}`}
               title="Sair"
             >
               <LogOut className="w-4 h-4" />
@@ -82,9 +91,16 @@ export function Layout() {
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-brand-border flex items-center justify-between px-8 bg-brand-surface shrink-0">
           <div className="flex items-center gap-4">
+             <button 
+               onClick={() => setIsSidebarExpanded(!isSidebarExpanded)} 
+               className="p-1.5 -ml-2 text-slate-500 hover:text-brand-dark hover:bg-gray-100 rounded-md transition-colors"
+               title={isSidebarExpanded ? "Recolher menu" : "Expandir menu"}
+             >
+               <Menu className="w-5 h-5" />
+             </button>
              <h2 className="text-sm font-medium text-brand-dark">{getPageTitle()}</h2>
-             <div className="h-4 w-[1px] bg-gray-100"></div>
-             <span className="text-xs text-slate-500">SaaS SolAmigo FV</span>
+             <div className="h-4 w-[1px] bg-gray-100 hidden sm:block"></div>
+             <span className="text-xs text-slate-500 hidden sm:block">SaaS SolAmigo FV</span>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/propostas/nova">
