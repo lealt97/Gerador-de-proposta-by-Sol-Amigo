@@ -16,6 +16,9 @@ type CoverTheme = {
   original?: PdfTheme;
 };
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
 const COLOR_ALIASES: Record<string, keyof PdfTheme> = {
   '#0A2249': 'primary',
   '#051225': 'primary',
@@ -99,20 +102,66 @@ function applyTheme(doc: Document, theme: CoverTheme) {
 function setHref(element: Element | null, href: string) {
   if (!element || !href) return;
   element.setAttribute('href', href);
-  element.setAttribute('xlink:href', href);
+  element.setAttributeNS(XLINK_NS, 'xlink:href', href);
 }
 
-function findPhotoPatternImage(doc: Document) {
-  const photoGroup = Array.from(doc.querySelectorAll('[id]')).find((element) => {
-    const id = element.getAttribute('id')?.toLowerCase() || '';
-    return id.includes('foto') || id.includes('cover-photo');
-  });
+function getSvgSize(doc: Document) {
+  const svg = doc.querySelector('svg');
+  const viewBox = svg?.getAttribute('viewBox')?.split(/\s+/).map(Number);
+  if (viewBox?.length === 4 && viewBox.every(Number.isFinite)) {
+    return { width: viewBox[2], height: viewBox[3] };
+  }
 
-  const shapeWithPattern = photoGroup?.querySelector('[fill^="url(#"]') || doc.querySelector('[fill^="url(#pattern"]');
-  const fill = shapeWithPattern?.getAttribute('fill') || '';
-  const match = fill.match(/url\(#([^\)]+)\)/);
-  const patternId = match?.[1];
-  return patternId ? doc.querySelector(`#${CSS.escape(patternId)} image`) : doc.querySelector('pattern image');
+  return {
+    width: parseFloat(svg?.getAttribute('width') || '595'),
+    height: parseFloat(svg?.getAttribute('height') || '842'),
+  };
+}
+
+function getOrCreateDefs(doc: Document) {
+  const svg = doc.querySelector('svg');
+  let defs = doc.querySelector('defs');
+  if (!defs) {
+    defs = doc.createElementNS(SVG_NS, 'defs');
+    svg?.appendChild(defs);
+  }
+  return defs;
+}
+
+function findPhotoGroup(doc: Document) {
+  return Array.from(doc.querySelectorAll('[id]')).find((element) => {
+    const id = element.getAttribute('id')?.toLowerCase() || '';
+    return id.includes('foto_aqui') || id.includes('foto aqui') || id.includes('cover-photo');
+  }) || null;
+}
+
+function getPatternIdFromFill(fill: string | null) {
+  const match = fill?.match(/url\(#([^\)]+)\)/);
+  return match?.[1] || null;
+}
+
+function findPhotoPatternTarget(doc: Document, patternId: string | null) {
+  if (!patternId) return null;
+  const pattern = doc.getElementById(patternId);
+  if (!pattern) return null;
+
+  const directImage = pattern.querySelector('image');
+  if (directImage) return directImage;
+
+  const use = pattern.querySelector('use');
+  const href = use?.getAttribute('href') || use?.getAttribute('xlink:href');
+  const referencedId = href?.startsWith('#') ? href.slice(1) : null;
+  return referencedId ? doc.getElementById(referencedId) : null;
+}
+
+function findPhotoShape(doc: Document) {
+  const photoGroup = findPhotoGroup(doc);
+  const shape = photoGroup?.querySelector('[fill^="url(#pattern"]')
+    || photoGroup?.querySelector('[fill^="url(#"]')
+    || doc.querySelector('[fill^="url(#pattern"]')
+    || doc.querySelector('[fill^="url(#"]');
+
+  return { photoGroup, shape };
 }
 
 function applyTransform(element: Element, transform?: TransformConfig) {
@@ -130,6 +179,75 @@ function hidePhotoIcon(doc: Document) {
   });
 }
 
+function insertPhotoInPlaceholder(doc: Document, imageUrl: string, transform?: TransformConfig) {
+  const { photoGroup, shape } = findPhotoShape(doc);
+  const patternId = getPatternIdFromFill(shape?.getAttribute('fill') || null);
+  const patternTarget = findPhotoPatternTarget(doc, patternId);
+
+  if (patternTarget) {
+    setHref(patternTarget, imageUrl);
+  }
+
+  if (!shape || !photoGroup) {
+    if (patternTarget) {
+      patternTarget.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      applyTransform(patternTarget, transform);
+      hidePhotoIcon(doc);
+    }
+    return;
+  }
+
+  const d = shape.getAttribute('d');
+  if (!d) {
+    if (patternTarget) {
+      patternTarget.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      applyTransform(patternTarget, transform);
+      hidePhotoIcon(doc);
+    }
+    return;
+  }
+
+  const clipId = 'cover-photo-clip';
+  const defs = getOrCreateDefs(doc);
+  defs.querySelector(`#${clipId}`)?.remove();
+
+  const clipPath = doc.createElementNS(SVG_NS, 'clipPath');
+  clipPath.setAttribute('id', clipId);
+  const clipShape = doc.createElementNS(SVG_NS, 'path');
+  clipShape.setAttribute('d', d);
+  clipShape.setAttribute('clip-rule', shape.getAttribute('clip-rule') || 'evenodd');
+  clipShape.setAttribute('fill-rule', shape.getAttribute('fill-rule') || 'evenodd');
+  clipPath.appendChild(clipShape);
+  defs.appendChild(clipPath);
+
+  const size = getSvgSize(doc);
+  const image = doc.createElementNS(SVG_NS, 'image');
+  image.setAttribute('id', 'cover-photo-image');
+  image.setAttribute('data-pdf-role', 'cover-photo-image');
+  image.setAttribute('x', '0');
+  image.setAttribute('y', '0');
+  image.setAttribute('width', String(size.width));
+  image.setAttribute('height', String(size.height));
+  image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+  image.setAttribute('clip-path', `url(#${clipId})`);
+  setHref(image, imageUrl);
+  applyTransform(image, transform);
+
+  shape.setAttribute('id', 'cover-photo-shape');
+  shape.setAttribute('data-pdf-role', 'cover-photo-shape');
+  shape.setAttribute('display', 'none');
+  photoGroup.setAttribute('id', 'cover-photo');
+  photoGroup.setAttribute('data-pdf-role', 'cover-photo');
+
+  const overlay = Array.from(photoGroup.children).find((child) => {
+    const fill = child.getAttribute('fill') || '';
+    return fill.startsWith('url(#paint') || fill.includes('linear');
+  });
+
+  photoGroup.insertBefore(image, overlay || shape.nextSibling);
+  hidePhotoIcon(doc);
+}
+
 function replaceLogo(doc: Document, logoUrl?: string | null, transform?: TransformConfig) {
   if (!logoUrl) return;
 
@@ -140,10 +258,9 @@ function replaceLogo(doc: Document, logoUrl?: string | null, transform?: Transfo
 
   if (!logoText) return;
 
-  const image = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+  const image = doc.createElementNS(SVG_NS, 'image');
   image.setAttribute('id', 'company-logo');
-  image.setAttribute('href', logoUrl);
-  image.setAttribute('xlink:href', logoUrl);
+  setHref(image, logoUrl);
   image.setAttribute('x', '32');
   image.setAttribute('y', '32');
   image.setAttribute('width', '140');
@@ -184,12 +301,8 @@ export function buildCoverSvg(svgSource: string, theme: CoverTheme, values: Cove
   applyTheme(doc, theme);
   applyTexts(doc, values);
 
-  const photoImage = findPhotoPatternImage(doc);
-  if (photoImage && values.coverImageUrl) {
-    setHref(photoImage, values.coverImageUrl);
-    photoImage.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    applyTransform(photoImage, values.coverImageTransform);
-    hidePhotoIcon(doc);
+  if (values.coverImageUrl) {
+    insertPhotoInPlaceholder(doc, values.coverImageUrl, values.coverImageTransform);
   }
 
   replaceLogo(doc, values.logoUrl, values.logoTransform);
