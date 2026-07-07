@@ -1,4 +1,5 @@
 import { PdfTheme, TransformConfig } from '../../../types/pdfModels';
+import { applyCoverPhotoClip } from './coverPhotoClip';
 
 type CoverValues = {
   clientName?: string;
@@ -105,110 +106,6 @@ function setHref(element: Element | null, href: string) {
   element.setAttributeNS(XLINK_NS, 'xlink:href', href);
 }
 
-function getPatternIdFromFill(fill: string | null) {
-  const match = fill?.match(/url\(#([^\)]+)\)/);
-  return match?.[1] || null;
-}
-
-function isPhotoId(element: Element) {
-  const id = element.getAttribute('id')?.toLowerCase() || '';
-  return id.includes('foto_aqui') || id.includes('foto aqui') || id.includes('cover-photo');
-}
-
-function isSvgShape(element: Element | null) {
-  if (!element) return false;
-  return ['path', 'rect', 'polygon', 'polyline', 'circle', 'ellipse'].includes(element.tagName.toLowerCase());
-}
-
-function findPhotoShape(doc: Document) {
-  const byId = Array.from(doc.querySelectorAll('[id]')).find(isPhotoId) || null;
-
-  if (byId && isSvgShape(byId) && getPatternIdFromFill(byId.getAttribute('fill'))) {
-    return byId;
-  }
-
-  const childShape = byId?.querySelector('[fill^="url(#pattern"], [fill^="url(#"]') || null;
-  if (childShape) return childShape;
-
-  return doc.querySelector('[fill^="url(#pattern"], [fill^="url(#"]');
-}
-
-function getPatternElement(doc: Document, patternId: string | null) {
-  if (!patternId) return null;
-  return doc.getElementById(patternId);
-}
-
-function removePatternChildren(pattern: Element) {
-  while (pattern.firstChild) {
-    pattern.removeChild(pattern.firstChild);
-  }
-}
-
-function normalizePatternAsFigmaCrop(pattern: Element) {
-  pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
-  pattern.setAttribute('width', '1');
-  pattern.setAttribute('height', '1');
-  pattern.setAttribute('data-pdf-image-mode', 'crop');
-  pattern.removeAttribute('patternTransform');
-}
-
-function getImageCropTransform(transform?: TransformConfig) {
-  const zoom = Math.max(0.1, Number(transform?.zoom ?? 1));
-  const x = Number(transform?.x ?? 0) / 595;
-  const y = Number(transform?.y ?? 0) / 842;
-  const left = ((1 - zoom) / 2) + x;
-  const top = ((1 - zoom) / 2) + y;
-  const rotate = Number(transform?.rotate ?? 0);
-
-  if (!rotate) return { x: left, y: top, width: zoom, height: zoom, transform: '' };
-
-  return {
-    x: left,
-    y: top,
-    width: zoom,
-    height: zoom,
-    transform: `rotate(${rotate} 0.5 0.5)`,
-  };
-}
-
-function applyPhotoAsFigmaCrop(doc: Document, imageUrl?: string | null, transform?: TransformConfig) {
-  if (!imageUrl) return;
-
-  const shape = findPhotoShape(doc);
-  const patternId = getPatternIdFromFill(shape?.getAttribute('fill') || null);
-  const pattern = getPatternElement(doc, patternId);
-
-  if (!shape || !pattern) return;
-
-  normalizePatternAsFigmaCrop(pattern);
-  removePatternChildren(pattern);
-
-  const crop = getImageCropTransform(transform);
-  const image = doc.createElementNS(SVG_NS, 'image');
-  image.setAttribute('id', 'cover-photo-image');
-  image.setAttribute('data-pdf-role', 'cover-photo-image');
-  image.setAttribute('data-pdf-image-mode', 'crop');
-  image.setAttribute('x', String(crop.x));
-  image.setAttribute('y', String(crop.y));
-  image.setAttribute('width', String(crop.width));
-  image.setAttribute('height', String(crop.height));
-  image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-  if (crop.transform) image.setAttribute('transform', crop.transform);
-  setHref(image, imageUrl);
-
-  pattern.appendChild(image);
-  shape.setAttribute('id', 'cover-photo-shape');
-  shape.setAttribute('data-pdf-role', 'cover-photo-shape');
-  shape.setAttribute('data-pdf-image-mode', 'crop');
-  hidePhotoIcon(doc);
-}
-
-function hidePhotoIcon(doc: Document) {
-  doc.querySelectorAll('[id*="foto_aqui_icon"], [id*="foto aqui_icon"], [id*="Foto_aqui_icon"], [id*="photo_icon"], [id*="image_icon"]').forEach((element) => {
-    element.setAttribute('display', 'none');
-  });
-}
-
 function replaceLogo(doc: Document, logoUrl?: string | null, transform?: TransformConfig) {
   if (!logoUrl) return;
 
@@ -261,7 +158,7 @@ export function buildCoverSvg(svgSource: string, theme: CoverTheme, values: Cove
 
   applyTheme(doc, theme);
   applyTexts(doc, values);
-  applyPhotoAsFigmaCrop(doc, values.coverImageUrl, values.coverImageTransform);
+  applyCoverPhotoClip(doc, values.coverImageUrl, values.coverImageTransform);
   replaceLogo(doc, values.logoUrl, values.logoTransform);
 
   return new XMLSerializer().serializeToString(doc);
