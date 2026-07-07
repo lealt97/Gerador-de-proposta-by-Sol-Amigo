@@ -1,4 +1,5 @@
 import { PdfTheme, TransformConfig } from '../../../types/pdfModels';
+import { applyPhotoMask } from './coverPhotoMask';
 
 type CoverValues = {
   clientName?: string;
@@ -261,7 +262,7 @@ export function buildCoverSvg(svgSource: string, theme: CoverTheme, values: Cove
 
   applyTheme(doc, theme);
   applyTexts(doc, values);
-  applyPhotoAsFigmaCrop(doc, values.coverImageUrl, values.coverImageTransform);
+  applyPhotoMask(doc, values.coverImageUrl, values.coverImageTransform);
   replaceLogo(doc, values.logoUrl, values.logoTransform);
 
   return new XMLSerializer().serializeToString(doc);
