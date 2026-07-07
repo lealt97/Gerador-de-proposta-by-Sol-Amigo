@@ -60,14 +60,14 @@ export function CoverPhotoFramingSelector({ imageUrl, transform, onChange, onRes
   return (
     <div className="space-y-3 mt-4 border-t border-brand-border pt-4">
       <div>
-        <Label className="text-xs text-slate-500 uppercase tracking-wider">Enquadramento da imagem original</Label>
-        <p className="text-xs text-slate-500 mt-1">
+        <Label className="text-xs text-slate-200 uppercase tracking-wider font-semibold">Enquadramento da imagem original</Label>
+        <p className="text-xs text-slate-300 mt-1">
           Clique no ponto principal da paisagem. Esse ponto será priorizado no crop da área foto_aqui.
         </p>
       </div>
 
       <div
-        className="relative aspect-video overflow-hidden rounded-lg border border-brand-border bg-slate-100 cursor-crosshair select-none"
+        className="relative aspect-video overflow-hidden rounded-lg border border-brand-border bg-slate-950/60 cursor-crosshair select-none"
         onMouseDown={updateFocusFromEvent}
         onMouseMove={(event) => {
           if (event.buttons === 1) updateFocusFromEvent(event);
@@ -85,31 +85,31 @@ export function CoverPhotoFramingSelector({ imageUrl, transform, onChange, onRes
 
       <div className="space-y-3">
         <div className="space-y-1">
-          <div className="flex justify-between text-xs text-slate-500">
+          <div className="flex justify-between text-xs text-slate-200 font-semibold">
             <span>Zoom do crop</span>
-            <span>{t.zoom.toFixed(2)}x</span>
+            <span className="text-brand-blue">{t.zoom.toFixed(2)}x</span>
           </div>
-          <input type="range" min="1" max="3" step="0.05" value={t.zoom} onChange={(event) => onChange({ ...t, zoom: Number(event.target.value) })} className="w-full" />
+          <input type="range" min="1" max="3" step="0.05" value={t.zoom} onChange={(event) => onChange({ ...t, zoom: Number(event.target.value) })} className="w-full cursor-pointer accent-brand-blue bg-brand-border" />
         </div>
 
         <div className="space-y-1">
-          <div className="flex justify-between text-xs text-slate-500">
+          <div className="flex justify-between text-xs text-slate-200 font-semibold">
             <span>Foco horizontal</span>
-            <span>{Math.round(focus.x)}%</span>
+            <span className="text-brand-blue">{Math.round(focus.x)}%</span>
           </div>
-          <input type="range" min="0" max="100" step="1" value={focus.x} onChange={(event) => updateFocusX(Number(event.target.value))} className="w-full" />
+          <input type="range" min="0" max="100" step="1" value={focus.x} onChange={(event) => updateFocusX(Number(event.target.value))} className="w-full cursor-pointer accent-brand-blue bg-brand-border" />
         </div>
 
         <div className="space-y-1">
-          <div className="flex justify-between text-xs text-slate-500">
+          <div className="flex justify-between text-xs text-slate-200 font-semibold">
             <span>Foco vertical</span>
-            <span>{Math.round(focus.y)}%</span>
+            <span className="text-brand-blue">{Math.round(focus.y)}%</span>
           </div>
-          <input type="range" min="0" max="100" step="1" value={focus.y} onChange={(event) => updateFocusY(Number(event.target.value))} className="w-full" />
+          <input type="range" min="0" max="100" step="1" value={focus.y} onChange={(event) => updateFocusY(Number(event.target.value))} className="w-full cursor-pointer accent-brand-blue bg-brand-border" />
         </div>
       </div>
 
-      <Button type="button" variant="outline" size="sm" className="w-full" onClick={onReset}>
+      <Button type="button" variant="outline" size="sm" className="w-full border-brand-border bg-white/5 hover:bg-white/15 text-slate-100 hover:text-white font-semibold" onClick={onReset}>
         Resetar enquadramento
       </Button>
     </div>

@@ -112,26 +112,26 @@ export function DesignPdf() {
         
         <div className="flex overflow-x-auto pb-4 gap-6 snap-x">
           {presets.map(preset => (
-            <div key={preset.id} className="min-w-[280px] group relative bg-white border border-brand-border rounded-xl overflow-hidden shadow-sm snap-start">
-              <div className="aspect-[1/1.414] bg-gray-100 relative">
+            <div key={preset.id} className="min-w-[280px] group relative bg-brand-surface border border-brand-border rounded-xl overflow-hidden shadow-sm snap-start transition-transform hover:scale-[1.01]">
+              <div className="aspect-[1/1.414] bg-slate-950/40 relative">
                 {preset.thumbnail_url ? (
                   <img src={preset.thumbnail_url} alt={preset.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400">Sem miniatura</div>
                 )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Button onClick={() => handleAddFromPreset(preset.id)} className="gap-2">
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Button onClick={() => handleAddFromPreset(preset.id)} className="gap-2 font-semibold shadow-md">
                     <Plus className="w-4 h-4" /> Adicionar Modelo
                   </Button>
                 </div>
               </div>
-              <div className="p-4 border-t border-brand-border">
-                <h3 className="font-semibold text-brand-dark">{preset.name}</h3>
+              <div className="p-4 border-t border-brand-border bg-gray-50/20">
+                <h3 className="font-semibold text-white">{preset.name}</h3>
                 <div className="flex gap-2 mt-3">
-                  <div className="w-6 h-6 rounded-full border border-gray-200" style={{ backgroundColor: preset.default_theme.primary }} title="Primária" />
-                  <div className="w-6 h-6 rounded-full border border-gray-200" style={{ backgroundColor: preset.default_theme.secondary }} title="Secundária" />
-                  <div className="w-6 h-6 rounded-full border border-gray-200" style={{ backgroundColor: preset.default_theme.accent }} title="Destaque" />
-                  <div className="w-6 h-6 rounded-full border border-gray-200" style={{ backgroundColor: preset.default_theme.neutral }} title="Neutra" />
+                  <div className="w-6 h-6 rounded-full border border-brand-border" style={{ backgroundColor: preset.default_theme.primary }} title="Primária" />
+                  <div className="w-6 h-6 rounded-full border border-brand-border" style={{ backgroundColor: preset.default_theme.secondary }} title="Secundária" />
+                  <div className="w-6 h-6 rounded-full border border-brand-border" style={{ backgroundColor: preset.default_theme.accent }} title="Destaque" />
+                  <div className="w-6 h-6 rounded-full border border-brand-border" style={{ backgroundColor: preset.default_theme.neutral }} title="Neutra" />
                 </div>
               </div>
             </div>
@@ -151,8 +151,8 @@ export function DesignPdf() {
         </div>
 
         {userModels.length === 0 ? (
-          <div className="text-center p-12 bg-white border border-brand-border rounded-xl">
-            <LayoutTemplate className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <div className="text-center p-12 bg-brand-surface border border-brand-border rounded-xl">
+            <LayoutTemplate className="w-12 h-12 text-slate-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-brand-dark">Nenhum modelo adicionado</h3>
             <p className="text-slate-500 mt-2">Adicione um modelo padrão acima para começar a editar.</p>
           </div>
@@ -161,54 +161,83 @@ export function DesignPdf() {
             {userModels.map(model => {
               const preset = presets.find(p => p.id === model.preset_id);
               return (
-                <div key={model.id} className="relative bg-white border border-brand-border rounded-xl overflow-hidden shadow-sm flex flex-col">
+                <div key={model.id} className="relative bg-brand-surface border border-brand-border rounded-xl overflow-hidden shadow-sm flex flex-col transition-all hover:border-slate-500">
                   {model.is_default && (
-                    <div className="absolute top-2 left-2 z-10 bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
+                    <div className="absolute top-2 left-2 z-10 bg-amber-500 text-slate-950 text-xs font-black px-2 py-1 rounded shadow-md">
                       Padrão
                     </div>
                   )}
-                  <div className="aspect-[1/1.414] bg-gray-100 relative border-b border-brand-border">
+                  <div className="aspect-[1/1.414] bg-slate-950/40 relative border-b border-brand-border">
                     {preset?.thumbnail_url ? (
                       <img src={preset.thumbnail_url} alt={model.name} className="w-full h-full object-cover opacity-80" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">Sem preview</div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-                       <h3 className="font-semibold text-white truncate">{model.name}</h3>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex items-end p-4">
+                       <h3 className="font-semibold text-white truncate text-base drop-shadow-md">{model.name}</h3>
                     </div>
                   </div>
-                  <div className="p-3 flex justify-between items-center bg-gray-50">
-                    <div className="flex gap-1.5">
-                      <div className="w-5 h-5 rounded-full border border-gray-200" style={{ backgroundColor: model.theme.primary }} />
-                      <div className="w-5 h-5 rounded-full border border-gray-200" style={{ backgroundColor: model.theme.secondary }} />
-                      <div className="w-5 h-5 rounded-full border border-gray-200" style={{ backgroundColor: model.theme.accent }} />
-                      <div className="w-5 h-5 rounded-full border border-gray-200" style={{ backgroundColor: model.theme.neutral }} />
+                  
+                  <div className="p-4 bg-gray-50 flex flex-col gap-3 mt-auto">
+                    {/* Color Palettes */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-300 font-medium">Cores do Tema</span>
+                      <div className="flex gap-1">
+                        <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.primary }} title="Primária" />
+                        <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.secondary }} title="Secundária" />
+                        <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.accent }} title="Destaque" />
+                        <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.neutral }} title="Neutra" />
+                      </div>
                     </div>
-                    
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4 text-slate-600" />
+
+                    <div className="h-px bg-brand-border/60" />
+
+                    {/* Highly visible, high contrast, directly accessible Action Buttons */}
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          className="bg-brand-blue hover:bg-brand-blue-hover text-white font-bold flex items-center justify-center gap-1 text-xs py-2 shadow-sm"
+                          onClick={() => setEditingModel(model)}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" /> Editar
                         </Button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.Content className="min-w-[160px] bg-white rounded-md shadow-lg p-1 border border-brand-border z-50">
-                          <DropdownMenu.Item className="flex items-center gap-2 px-2 py-2 text-sm text-brand-dark hover:bg-gray-100 rounded-sm cursor-pointer outline-none" onClick={() => setEditingModel(model)}>
-                            <Edit2 className="w-4 h-4" /> Editar
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Item className="flex items-center gap-2 px-2 py-2 text-sm text-brand-dark hover:bg-gray-100 rounded-sm cursor-pointer outline-none" onClick={() => handleDuplicate(model.id)}>
-                            <Copy className="w-4 h-4" /> Duplicar
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Item className="flex items-center gap-2 px-2 py-2 text-sm text-brand-dark hover:bg-gray-100 rounded-sm cursor-pointer outline-none" onClick={() => handleSetDefault(model.id)}>
-                            <Star className="w-4 h-4" /> Definir como Padrão
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Separator className="h-px bg-brand-border my-1" />
-                          <DropdownMenu.Item className="flex items-center gap-2 px-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-sm cursor-pointer outline-none" onClick={() => handleDelete(model.id)}>
-                            <Trash className="w-4 h-4" /> Excluir
-                          </DropdownMenu.Item>
-                        </DropdownMenu.Content>
-                      </DropdownMenu.Portal>
-                    </DropdownMenu.Root>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="border-brand-border bg-white/5 hover:bg-white/15 text-slate-100 hover:text-white font-semibold flex items-center justify-center gap-1 text-xs py-2"
+                          onClick={() => handleDuplicate(model.id)}
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Duplicar
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {!model.is_default ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 font-semibold flex items-center justify-center gap-1 text-xs py-2"
+                            onClick={() => handleSetDefault(model.id)}
+                          >
+                            <Star className="w-3.5 h-3.5" /> Tornar Padrão
+                          </Button>
+                        ) : (
+                          <div className="border border-amber-500/30 text-amber-300 bg-amber-500/20 rounded-md flex items-center justify-center gap-1 text-xs py-2 font-bold shadow-inner">
+                            <Star className="w-3.5 h-3.5 fill-current text-amber-400 animate-pulse" /> Padrão Ativo
+                          </div>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold flex items-center justify-center gap-1 text-xs py-2 shadow-sm"
+                          onClick={() => handleDelete(model.id)}
+                        >
+                          <Trash className="w-3.5 h-3.5" /> Excluir
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );

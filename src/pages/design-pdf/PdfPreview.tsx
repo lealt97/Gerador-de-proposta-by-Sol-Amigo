@@ -63,8 +63,7 @@ export function PdfPreview({ model }: PdfPreviewProps) {
   return (
     <div className="w-full h-full flex items-center justify-center p-4">
       <div 
-        className="shadow-2xl border border-brand-border bg-white max-w-full max-h-full aspect-[1/1.414]"
-        style={{ width: 'auto', height: '100%', minHeight: '500px' }}
+        className="shadow-2xl border border-brand-border bg-white w-full h-auto md:w-auto md:h-full max-w-full max-h-full aspect-[1/1.414] [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-full [&>svg]:max-h-full [&>svg]:block flex items-center justify-center"
         dangerouslySetInnerHTML={{ __html: finalSvgContent }}
       />
     </div>

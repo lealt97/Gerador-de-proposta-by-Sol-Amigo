@@ -111,47 +111,46 @@ export function DesignPdfEditor({ model: initialModel, onClose, onSave }: Design
       </div>
     );
   };
-
   return (
     <div className="flex h-[calc(100vh-64px)] -mx-6 -my-6 bg-brand-surface">
       {/* Sidebar Editor */}
-      <div className="w-96 border-r border-brand-border bg-white flex flex-col h-full z-10 shadow-lg">
-        <div className="p-4 border-b border-brand-border flex items-center justify-between bg-gray-50">
+      <div className="w-96 border-r border-brand-border bg-brand-surface flex flex-col h-full z-10 shadow-lg text-brand-dark">
+        <div className="p-4 border-b border-brand-border flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white" onClick={onClose}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <h2 className="font-semibold text-brand-dark">Editar Modelo</h2>
+            <h2 className="font-semibold text-white text-lg">Editar Modelo</h2>
           </div>
-          <Button onClick={handleSave} isLoading={isSaving} className="gap-2 h-8">
+          <Button onClick={handleSave} isLoading={isSaving} className="gap-2 h-9 bg-brand-blue hover:bg-brand-blue-hover text-white font-bold shadow-sm">
             <Save className="w-4 h-4" /> Salvar
           </Button>
         </div>
 
-        <div className="p-4">
-          <Label>Nome do Modelo</Label>
+        <div className="p-4 border-b border-brand-border bg-gray-50/20">
+          <Label className="text-slate-300 font-semibold text-sm">Nome do Modelo</Label>
           <Input 
             value={model.name} 
             onChange={e => setModel(p => ({ ...p, name: e.target.value }))}
-            className="mt-1"
+            className="mt-1.5 bg-gray-50/50 border-brand-border text-white placeholder-slate-400 font-medium"
           />
         </div>
 
-        <div className="flex border-b border-brand-border px-4 gap-4">
+        <div className="flex border-b border-brand-border px-4 gap-4 bg-gray-50/30">
           <button 
-            className={`py-2 text-sm font-medium border-b-2 ${activeTab === 'colors' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-slate-500'}`}
+            className={`py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'colors' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
             onClick={() => setActiveTab('colors')}
           >
             Cores
           </button>
           <button 
-            className={`py-2 text-sm font-medium border-b-2 ${activeTab === 'images' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-slate-500'}`}
+            className={`py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'images' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
             onClick={() => setActiveTab('images')}
           >
             Imagens
           </button>
           <button 
-            className={`py-2 text-sm font-medium border-b-2 ${activeTab === 'pages' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-slate-500'}`}
+            className={`py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'pages' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
             onClick={() => setActiveTab('pages')}
           >
             Páginas
@@ -162,42 +161,54 @@ export function DesignPdfEditor({ model: initialModel, onClose, onSave }: Design
           {activeTab === 'colors' && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Cor Primária</Label>
-                <div className="flex gap-2"><Input type="color" value={model.theme.primary} onChange={e => updateTheme('primary', e.target.value)} className="w-12 h-10 p-1" /><Input type="text" value={model.theme.primary} onChange={e => updateTheme('primary', e.target.value)} className="flex-1 uppercase font-mono text-sm" /></div>
+                <Label className="text-slate-300 font-medium">Cor Primária</Label>
+                <div className="flex gap-2">
+                  <Input type="color" value={model.theme.primary} onChange={e => updateTheme('primary', e.target.value)} className="w-12 h-10 p-1 bg-transparent border-brand-border cursor-pointer" />
+                  <Input type="text" value={model.theme.primary} onChange={e => updateTheme('primary', e.target.value)} className="flex-1 uppercase font-mono text-sm bg-gray-50/40 border-brand-border text-white" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Cor Secundária</Label>
-                <div className="flex gap-2"><Input type="color" value={model.theme.secondary} onChange={e => updateTheme('secondary', e.target.value)} className="w-12 h-10 p-1" /><Input type="text" value={model.theme.secondary} onChange={e => updateTheme('secondary', e.target.value)} className="flex-1 uppercase font-mono text-sm" /></div>
+                <Label className="text-slate-300 font-medium">Cor Secundária</Label>
+                <div className="flex gap-2">
+                  <Input type="color" value={model.theme.secondary} onChange={e => updateTheme('secondary', e.target.value)} className="w-12 h-10 p-1 bg-transparent border-brand-border cursor-pointer" />
+                  <Input type="text" value={model.theme.secondary} onChange={e => updateTheme('secondary', e.target.value)} className="flex-1 uppercase font-mono text-sm bg-gray-50/40 border-brand-border text-white" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Cor Destaque</Label>
-                <div className="flex gap-2"><Input type="color" value={model.theme.accent} onChange={e => updateTheme('accent', e.target.value)} className="w-12 h-10 p-1" /><Input type="text" value={model.theme.accent} onChange={e => updateTheme('accent', e.target.value)} className="flex-1 uppercase font-mono text-sm" /></div>
+                <Label className="text-slate-300 font-medium">Cor Destaque</Label>
+                <div className="flex gap-2">
+                  <Input type="color" value={model.theme.accent} onChange={e => updateTheme('accent', e.target.value)} className="w-12 h-10 p-1 bg-transparent border-brand-border cursor-pointer" />
+                  <Input type="text" value={model.theme.accent} onChange={e => updateTheme('accent', e.target.value)} className="flex-1 uppercase font-mono text-sm bg-gray-50/40 border-brand-border text-white" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Cor Neutra (Fundos)</Label>
-                <div className="flex gap-2"><Input type="color" value={model.theme.neutral} onChange={e => updateTheme('neutral', e.target.value)} className="w-12 h-10 p-1" /><Input type="text" value={model.theme.neutral} onChange={e => updateTheme('neutral', e.target.value)} className="flex-1 uppercase font-mono text-sm" /></div>
+                <Label className="text-slate-300 font-medium">Cor Neutra (Fundos)</Label>
+                <div className="flex gap-2">
+                  <Input type="color" value={model.theme.neutral} onChange={e => updateTheme('neutral', e.target.value)} className="w-12 h-10 p-1 bg-transparent border-brand-border cursor-pointer" />
+                  <Input type="text" value={model.theme.neutral} onChange={e => updateTheme('neutral', e.target.value)} className="flex-1 uppercase font-mono text-sm bg-gray-50/40 border-brand-border text-white" />
+                </div>
               </div>
-              <p className="text-xs text-slate-500 mt-4">Nota: O branco puro (#FFFFFF) é fixo e não editável.</p>
+              <p className="text-xs text-slate-400 mt-4 font-medium">Nota: O branco puro (#FFFFFF) é fixo e não editável.</p>
             </div>
           )}
 
           {activeTab === 'images' && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label>Logo da Empresa</Label>
+                <Label className="text-slate-300 font-medium">Logo da Empresa</Label>
                 <div className="flex items-center gap-2">
                   <Input type="file" accept="image/*" onChange={e => handleFileUpload(e, 'logo_url')} className="hidden" id="logo-upload" />
-                  <Button variant="outline" className="w-full gap-2" onClick={() => document.getElementById('logo-upload')?.click()}><Upload className="w-4 h-4" /> Enviar Logo</Button>
+                  <Button variant="outline" className="w-full gap-2 border-brand-border bg-white/5 hover:bg-white/15 text-slate-100 hover:text-white" onClick={() => document.getElementById('logo-upload')?.click()}><Upload className="w-4 h-4" /> Enviar Logo</Button>
                 </div>
                 {model.logo_url && renderTransformControls('logo_transform', 'Logo')}
               </div>
 
               <div className="space-y-2">
-                <Label>Imagem da Capa</Label>
-                <Input type="text" placeholder="URL da imagem (ou faça upload)" value={model.cover_image_url || ''} onChange={e => setModel(p => ({ ...p, cover_image_url: e.target.value, cover_image_transform: getDefaultTransform() }))} />
+                <Label className="text-slate-300 font-medium">Imagem da Capa</Label>
+                <Input type="text" placeholder="URL da imagem (ou faça upload)" value={model.cover_image_url || ''} onChange={e => setModel(p => ({ ...p, cover_image_url: e.target.value, cover_image_transform: getDefaultTransform() }))} className="bg-gray-50/40 border-brand-border text-white placeholder-slate-400 font-medium" />
                 <div className="flex items-center gap-2 mt-2">
                   <Input type="file" accept="image/*" onChange={e => handleFileUpload(e, 'cover_image_url')} className="hidden" id="cover-upload" />
-                  <Button variant="outline" className="w-full gap-2" onClick={() => document.getElementById('cover-upload')?.click()}><Upload className="w-4 h-4" /> Enviar Imagem</Button>
+                  <Button variant="outline" className="w-full gap-2 border-brand-border bg-white/5 hover:bg-white/15 text-slate-100 hover:text-white" onClick={() => document.getElementById('cover-upload')?.click()}><Upload className="w-4 h-4" /> Enviar Imagem</Button>
                 </div>
                 {model.cover_image_url && (
                   <>
@@ -216,11 +227,11 @@ export function DesignPdfEditor({ model: initialModel, onClose, onSave }: Design
 
           {activeTab === 'pages' && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-500">Configuração de ordem e visibilidade das páginas internas.</p>
+              <p className="text-sm text-slate-300 font-medium">Configuração de ordem e visibilidade das páginas internas.</p>
               <div className="space-y-2">
                 {model.page_config.order.map((pageId, idx) => (
-                  <div key={pageId} className="flex items-center justify-between p-3 bg-gray-50 border border-brand-border rounded-lg">
-                    <span className="text-sm font-medium text-brand-dark">{idx + 1}. {pageId}</span>
+                  <div key={pageId} className="flex items-center justify-between p-3 bg-gray-50/50 border border-brand-border rounded-lg">
+                    <span className="text-sm font-semibold text-brand-dark">{idx + 1}. {pageId}</span>
                     {/* Add drag handles or visibility toggles here in a real app */}
                   </div>
                 ))}
