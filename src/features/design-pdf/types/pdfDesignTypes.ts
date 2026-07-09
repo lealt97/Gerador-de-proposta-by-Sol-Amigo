@@ -1,3 +1,5 @@
+import type { TransformConfig } from '../../../types/pdfModels';
+
 export type {
   PdfTemplatePreset,
   PdfTheme,
@@ -15,5 +17,5 @@ export interface DesignPdfTexts {
 
 export interface DesignPdfAssetInput {
   url?: string | null;
-  transform?: import('../../../types/pdfModels').TransformConfig;
+  transform?: TransformConfig;
 }

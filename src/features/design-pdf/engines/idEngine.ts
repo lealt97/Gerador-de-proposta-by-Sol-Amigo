@@ -1,3 +1,7 @@
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function makeIdsUnique(doc: Document, suffix: string) {
   const elementsWithId = doc.querySelectorAll('[id]');
   const idMap = new Map<string, string>();
@@ -19,8 +23,8 @@ export function makeIdsUnique(doc: Document, suffix: string) {
 
       let nextValue = value;
       idMap.forEach((uniqueId, originalId) => {
-        const urlRegex = new RegExp(`url\\(#${originalId}\\)`, 'g');
-        nextValue = nextValue.replace(urlRegex, `url(#${uniqueId})`);
+        const escapedOriginalId = escapeRegExp(originalId);
+        nextValue = nextValue.replace(new RegExp(`url\\(#${escapedOriginalId}\\)`, 'g'), `url(#${uniqueId})`);
         if (nextValue === `#${originalId}`) nextValue = `#${uniqueId}`;
       });
 
