@@ -9,6 +9,9 @@
   --color-brand-yellow: #FACB5C;
   --color-brand-green: #B4BF8A; /* Verde sálvia */
   
+  --color-brand-primary: #0076DD; /* Alias for primary brand blue */
+  --color-brand-primary-hover: #005BB5;
+  
   --color-brand-gray: #0E2337; /* Main Background (Azul marinho) */
   --color-brand-surface: #142E46; /* Card/Sidebar background (slightly lighter than marinho) */
   --color-brand-border: #1C3F5E; /* Dark theme borders */

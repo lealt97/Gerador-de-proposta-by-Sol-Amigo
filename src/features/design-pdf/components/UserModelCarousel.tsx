@@ -1,7 +1,7 @@
-import { ChevronLeft, ChevronRight, Copy, Edit2, MoreVertical, Star, Trash } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ChevronLeft, ChevronRight, Copy, Edit2, Star, Trash } from 'lucide-react';
 import { PdfUserModel } from '../types/pdfDesignTypes';
 import { PdfPreview } from './PdfPreview';
+import { Button } from '../../../components/ui/Button';
 
 interface UserModelCarouselProps {
   userModels: PdfUserModel[];
@@ -83,51 +83,101 @@ export function UserModelCarousel({
             }
 
             return (
-              <div key={model.id} onClick={() => !isActive && onActiveIndexChange(index)} style={{ zIndex: zIndexStyle }} className={`absolute left-1/2 top-1/2 -translate-y-1/2 w-[260px] group bg-brand-surface border rounded-xl overflow-hidden shadow-md transition-all duration-500 ease-out cursor-pointer select-none ${transformStyle} ${opacityStyle} ${isActive ? 'border-brand-primary shadow-xl ring-2 ring-brand-primary/20' : 'border-brand-border'}`}>
-                <div className="aspect-[1/1.414] bg-slate-950/40 relative">
+              <div key={model.id} onClick={() => !isActive && onActiveIndexChange(index)} style={{ zIndex: zIndexStyle }} className={`absolute left-1/2 top-1/2 -translate-y-1/2 w-[240px] group bg-brand-surface border rounded-xl overflow-hidden shadow-md transition-all duration-500 ease-out cursor-pointer select-none ${transformStyle} ${opacityStyle} ${isActive ? 'border-brand-primary shadow-xl ring-2 ring-brand-primary/20' : 'border-brand-border'}`}>
+                {/* Transparent Overlay for inactive cards to handle click-to-focus safely */}
+                {!isActive && (
+                  <div className="absolute inset-0 z-20 bg-transparent" />
+                )}
+                
+                <div className="aspect-[1/1.414] bg-slate-950/40 relative border-b border-brand-border">
                   <PdfPreview model={model} isCardPreview />
+                  
                   {model.is_default && (
-                    <div className="absolute top-3 left-3 bg-brand-primary text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
-                      <Star className="w-3 h-3 fill-current" /> Padrão
+                    <div className="absolute top-2 left-2 z-10 bg-amber-500 text-slate-950 text-xs font-black px-2 py-1 rounded shadow-md">
+                      Padrão
                     </div>
                   )}
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex items-end p-4 z-10 pointer-events-none">
+                    <h3 className="font-semibold text-white truncate text-base drop-shadow-md w-full text-center">{model.name}</h3>
+                  </div>
+
+                  {/* Hover Actions Overlay */}
                   {isActive && (
-                    <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button onClick={(event) => { event.stopPropagation(); onEdit(model); }} className="px-3 py-2 rounded-lg bg-brand-primary text-white text-sm font-semibold hover:bg-brand-primary/90 transition-colors flex items-center gap-2">
-                        <Edit2 className="w-4 h-4" /> Editar
-                      </button>
-                      <DropdownMenu.Root>
-                        <DropdownMenu.Trigger asChild>
-                          <button onClick={(event) => event.stopPropagation()} className="p-2 rounded-lg bg-slate-950/80 text-white hover:bg-slate-800 transition-colors">
-                            <MoreVertical className="w-4 h-4" />
+                    <div className="absolute inset-0 bg-slate-950/85 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-3 z-30 pointer-events-none group-hover:pointer-events-auto">
+                      <div className="flex gap-2 items-center justify-center">
+                        {/* Editar */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(model);
+                          }}
+                          className="w-10 h-10 rounded-full bg-brand-blue hover:bg-brand-blue-hover text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 focus:outline-none cursor-pointer"
+                          title="Editar Modelo"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {/* Duplicar */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDuplicate(model.id);
+                          }}
+                          className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 flex items-center justify-center border border-brand-border shadow-lg transition-all hover:scale-110 active:scale-95 focus:outline-none cursor-pointer"
+                          title="Duplicar Modelo"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        {/* Padrão */}
+                        {!model.is_default ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSetDefault(model.id);
+                            }}
+                            className="w-10 h-10 rounded-full bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-400 flex items-center justify-center border border-brand-border shadow-lg transition-all hover:scale-110 active:scale-95 focus:outline-none cursor-pointer"
+                            title="Definir como Padrão"
+                          >
+                            <Star className="w-4 h-4" />
                           </button>
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Portal>
-                          <DropdownMenu.Content className="z-50 min-w-[180px] rounded-lg border border-brand-border bg-brand-surface p-1 shadow-xl text-sm text-slate-100">
-                            <DropdownMenu.Item onClick={() => onDuplicate(model.id)} className="flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer hover:bg-white/10 outline-none">
-                              <Copy className="w-4 h-4" /> Duplicar
-                            </DropdownMenu.Item>
-                            {!model.is_default && (
-                              <DropdownMenu.Item onClick={() => onSetDefault(model.id)} className="flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer hover:bg-white/10 outline-none">
-                                <Star className="w-4 h-4" /> Definir padrão
-                              </DropdownMenu.Item>
-                            )}
-                            <DropdownMenu.Item onClick={() => onDelete(model.id)} className="flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-red-300 hover:bg-red-500/10 outline-none">
-                              <Trash className="w-4 h-4" /> Excluir
-                            </DropdownMenu.Item>
-                          </DropdownMenu.Content>
-                        </DropdownMenu.Portal>
-                      </DropdownMenu.Root>
+                        ) : (
+                          <div
+                            className="w-10 h-10 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-lg border border-amber-400"
+                            title="Modelo Ativo (Padrão)"
+                          >
+                            <Star className="w-4 h-4 fill-current" />
+                          </div>
+                        )}
+                        {/* Excluir */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(model.id);
+                          }}
+                          className="w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 focus:outline-none cursor-pointer"
+                          title="Excluir Modelo"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <span className="text-[10px] text-slate-300 font-medium tracking-wide bg-slate-900/80 px-2 py-0.5 rounded border border-brand-border/45">
+                        Ações do Modelo
+                      </span>
                     </div>
                   )}
                 </div>
-                <div className="p-4 border-t border-brand-border bg-gray-50/20">
-                  <h3 className={`font-semibold transition-colors duration-300 truncate text-sm text-center ${isActive ? 'text-white' : 'text-slate-400'}`}>{model.name}</h3>
-                  <div className="flex gap-2 mt-3 justify-center">
-                    <div className="w-5 h-5 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.primary }} title="Primária" />
-                    <div className="w-5 h-5 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.secondary }} title="Secundária" />
-                    <div className="w-5 h-5 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.accent }} title="Destaque" />
-                    <div className="w-5 h-5 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.neutral }} title="Neutra" />
+
+                <div className="p-4 bg-gray-50/20 flex flex-col mt-auto">
+                  {/* Color Palettes */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-300 font-medium">Cores</span>
+                    <div className="flex gap-1">
+                      <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.primary }} title="Primária" />
+                      <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.secondary }} title="Secundária" />
+                      <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.accent }} title="Destaque" />
+                      <div className="w-4 h-4 rounded-full border border-brand-border" style={{ backgroundColor: model.theme.neutral }} title="Neutra" />
+                    </div>
                   </div>
                 </div>
               </div>
