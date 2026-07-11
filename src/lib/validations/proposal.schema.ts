@@ -21,6 +21,8 @@ export const proposalSchema = z.object({
   
   // Projeto Solar
   cep: z.string().optional().or(z.literal('')),
+  roof_type: z.string().optional().or(z.literal('')),
+  roof_area_m2: z.union([z.string(), z.number()]).optional(),
   hsp: z.union([z.string(), z.number()]).optional(),
   panel_power_w: z.union([z.string(), z.number()]).optional(),
   yield_factor: z.union([z.string(), z.number()]).optional(),
