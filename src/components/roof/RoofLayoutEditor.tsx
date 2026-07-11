@@ -1,4 +1,4 @@
-import { PointerEvent, useMemo, useRef, useState } from 'react';
+import { MouseEvent, PointerEvent, useMemo, useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { RoofModuleSvg } from './RoofModuleSvg';
@@ -291,7 +291,7 @@ export function RoofLayoutEditor({
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const handleModuleClick = (event: React.MouseEvent<HTMLButtonElement>, moduleId: string) => {
+  const handleModuleClick = (event: MouseEvent<HTMLButtonElement>, moduleId: string) => {
     if (event.ctrlKey && event.altKey) return;
 
     if (event.shiftKey || event.metaKey || event.ctrlKey) {
