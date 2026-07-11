@@ -1,4 +1,4 @@
-import { MouseEvent, PointerEvent, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, MouseEvent, PointerEvent, useMemo, useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { RoofModuleSvg } from './RoofModuleSvg';
@@ -302,6 +302,15 @@ export function RoofLayoutEditor({
     setSelectedModuleIds([moduleId]);
   };
 
+  const handleModuleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+    if (validSelectedModuleIds.length === 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    removeSelectedModules();
+  };
+
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     const canvas = canvasRef.current;
@@ -364,7 +373,7 @@ export function RoofLayoutEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Dica: use Ctrl/Shift + clique para selecionar vários módulos. Use Ctrl + Alt + clique e arraste para copiar um módulo.
+          Dica: use Ctrl/Shift + clique para selecionar vários módulos. Use Ctrl + Alt + clique e arraste para copiar. Clique no módulo e pressione Delete para excluir.
         </p>
       </div>
 
@@ -423,6 +432,7 @@ export function RoofLayoutEditor({
                 type="button"
                 onPointerDown={(event) => handlePointerDown(event, module)}
                 onClick={(event) => handleModuleClick(event, module.id)}
+                onKeyDown={handleModuleKeyDown}
                 className={`absolute cursor-move bg-transparent p-0 transition-shadow ${isSelected ? 'outline outline-2 outline-brand-blue shadow-lg' : ''}`}
                 style={{
                   left: `${module.x}%`,
