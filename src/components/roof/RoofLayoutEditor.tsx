@@ -19,14 +19,24 @@ interface RoofLayoutEditorProps {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const round = (value: number) => Number(value.toFixed(2));
 
 function normalizeLayout(value?: RoofLayoutData | null): RoofLayoutData {
   const strings = value?.strings?.length ? value.strings : DEFAULT_ROOF_LAYOUT_STRINGS;
   return {
     ...EMPTY_ROOF_LAYOUT,
     ...value,
+    version: value?.version || 1,
     strings,
-    modules: value?.modules || [],
+    modules: (value?.modules || []).map((module) => ({
+      ...module,
+      width: module.width || 6,
+      height: module.height || 13,
+      rotation: module.rotation || 0,
+      skewX: module.skewX || 0,
+      skewY: module.skewY || 0,
+      stringId: module.stringId || strings[0]?.id || 'string-1',
+    })),
   };
 }
 
@@ -56,7 +66,10 @@ export function RoofLayoutEditor({
   const occupiedArea = layout.modules.length * moduleArea;
 
   const commitLayout = (nextLayout: RoofLayoutData) => {
-    onChange(nextLayout);
+    onChange({
+      ...nextLayout,
+      version: nextLayout.version || 1,
+    });
   };
 
   const updateModules = (modules: RoofLayoutModule[]) => {
@@ -67,37 +80,31 @@ export function RoofLayoutEditor({
     commitLayout({ ...layout, strings });
   };
 
+  const createModule = (index: number, x: number, y: number): RoofLayoutModule => ({
+    id: `mod-${Date.now()}-${index}`,
+    x: clamp(x, 0, 94),
+    y: clamp(y, 0, 87),
+    width: 6,
+    height: 13,
+    rotation: 0,
+    skewX: 0,
+    skewY: 0,
+    stringId: selectedStringId,
+  });
+
   const addModule = () => {
     const index = layout.modules.length;
-    const moduleWidth = 6;
-    const moduleHeight = 13;
-    const nextModule: RoofLayoutModule = {
-      id: `mod-${Date.now()}`,
-      x: clamp(5 + (index % 8) * 8, 0, 94),
-      y: clamp(8 + Math.floor(index / 8) * 15, 0, 87),
-      width: moduleWidth,
-      height: moduleHeight,
-      rotation: 0,
-      stringId: selectedStringId,
-    };
+    const nextModule = createModule(index, 5 + (index % 8) * 8, 8 + Math.floor(index / 8) * 15);
 
     updateModules([...layout.modules, nextModule]);
     setSelectedModuleId(nextModule.id);
   };
 
   const addModuleRow = () => {
-    const moduleWidth = 6;
-    const moduleHeight = 13;
     const startIndex = layout.modules.length;
-    const row = Array.from({ length: 6 }).map((_, index) => ({
-      id: `mod-${Date.now()}-${index}`,
-      x: clamp(5 + index * 8, 0, 94),
-      y: clamp(8 + Math.floor(startIndex / 8) * 15, 0, 87),
-      width: moduleWidth,
-      height: moduleHeight,
-      rotation: 0,
-      stringId: selectedStringId,
-    }));
+    const row = Array.from({ length: 6 }).map((_, index) =>
+      createModule(startIndex + index, 5 + index * 8, 8 + Math.floor(startIndex / 8) * 15)
+    );
 
     updateModules([...layout.modules, ...row]);
     setSelectedModuleId(row[0]?.id || null);
@@ -107,6 +114,20 @@ export function RoofLayoutEditor({
     if (!selectedModuleId) return;
     updateModules(layout.modules.filter((module) => module.id !== selectedModuleId));
     setSelectedModuleId(null);
+  };
+
+  const duplicateSelectedModule = () => {
+    if (!selectedModule) return;
+
+    const duplicate: RoofLayoutModule = {
+      ...selectedModule,
+      id: `mod-${Date.now()}`,
+      x: clamp(selectedModule.x + 2, 0, 100 - selectedModule.width),
+      y: clamp(selectedModule.y + 2, 0, 100 - selectedModule.height),
+    };
+
+    updateModules([...layout.modules, duplicate]);
+    setSelectedModuleId(duplicate.id);
   };
 
   const clearModules = () => {
@@ -138,6 +159,10 @@ export function RoofLayoutEditor({
           : module
       )
     );
+  };
+
+  const resetSelectedPerspective = () => {
+    updateSelectedModule({ rotation: 0, skewX: 0, skewY: 0 });
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>, module: RoofLayoutModule) => {
@@ -174,8 +199,8 @@ export function RoofLayoutEditor({
         item.id === drag.id
           ? {
               ...item,
-              x: clamp(Number(nextX.toFixed(2)), 0, 100 - item.width),
-              y: clamp(Number(nextY.toFixed(2)), 0, 100 - item.height),
+              x: clamp(round(nextX), 0, 100 - item.width),
+              y: clamp(round(nextY), 0, 100 - item.height),
             }
           : item
       )
@@ -210,7 +235,7 @@ export function RoofLayoutEditor({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4">
         <div
           ref={canvasRef}
           onPointerMove={handlePointerMove}
@@ -265,13 +290,13 @@ export function RoofLayoutEditor({
                 type="button"
                 onPointerDown={(event) => handlePointerDown(event, module)}
                 onClick={() => setSelectedModuleId(module.id)}
-                className={`absolute cursor-move transition-shadow ${isSelected ? 'ring-2 ring-offset-2 ring-brand-blue' : ''}`}
+                className={`absolute cursor-move bg-transparent p-0 transition-shadow ${isSelected ? 'ring-2 ring-offset-2 ring-brand-blue' : ''}`}
                 style={{
                   left: `${module.x}%`,
                   top: `${module.y}%`,
                   width: `${module.width}%`,
                   height: `${module.height}%`,
-                  transform: `rotate(${module.rotation}deg)`,
+                  transform: `rotate(${module.rotation || 0}deg) skewX(${module.skewX || 0}deg) skewY(${module.skewY || 0}deg)`,
                   transformOrigin: 'center',
                 }}
                 title={`Módulo ${index + 1}`}
@@ -324,7 +349,13 @@ export function RoofLayoutEditor({
 
           {selectedModule ? (
             <div className="space-y-3 border-t border-brand-border pt-4">
-              <h4 className="text-sm font-semibold text-brand-dark">Módulo selecionado</h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold text-brand-dark">Módulo selecionado</h4>
+                <Button type="button" variant="ghost" size="sm" onClick={resetSelectedPerspective}>
+                  Resetar perspectiva
+                </Button>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-xs text-slate-500">
                   X %
@@ -345,11 +376,59 @@ export function RoofLayoutEditor({
                   />
                 </label>
                 <label className="text-xs text-slate-500">
-                  Rotação
+                  Largura %
                   <input
                     type="number"
+                    min="2"
+                    max="30"
+                    step="0.5"
+                    value={selectedModule.width}
+                    onChange={(event) => updateSelectedModule({ width: clamp(Number(event.target.value), 2, 30) })}
+                    className="mt-1 w-full rounded border border-brand-border bg-gray-50 px-2 py-1 text-xs"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Altura %
+                  <input
+                    type="number"
+                    min="4"
+                    max="45"
+                    step="0.5"
+                    value={selectedModule.height}
+                    onChange={(event) => updateSelectedModule({ height: clamp(Number(event.target.value), 4, 45) })}
+                    className="mt-1 w-full rounded border border-brand-border bg-gray-50 px-2 py-1 text-xs"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Rotação °
+                  <input
+                    type="number"
+                    min="-180"
+                    max="180"
                     value={selectedModule.rotation}
-                    onChange={(event) => updateSelectedModule({ rotation: Number(event.target.value) || 0 })}
+                    onChange={(event) => updateSelectedModule({ rotation: clamp(Number(event.target.value) || 0, -180, 180) })}
+                    className="mt-1 w-full rounded border border-brand-border bg-gray-50 px-2 py-1 text-xs"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Skew X °
+                  <input
+                    type="number"
+                    min="-45"
+                    max="45"
+                    value={selectedModule.skewX || 0}
+                    onChange={(event) => updateSelectedModule({ skewX: clamp(Number(event.target.value) || 0, -45, 45) })}
+                    className="mt-1 w-full rounded border border-brand-border bg-gray-50 px-2 py-1 text-xs"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Skew Y °
+                  <input
+                    type="number"
+                    min="-45"
+                    max="45"
+                    value={selectedModule.skewY || 0}
+                    onChange={(event) => updateSelectedModule({ skewY: clamp(Number(event.target.value) || 0, -45, 45) })}
                     className="mt-1 w-full rounded border border-brand-border bg-gray-50 px-2 py-1 text-xs"
                   />
                 </label>
@@ -366,13 +445,45 @@ export function RoofLayoutEditor({
                   </Select>
                 </label>
               </div>
-              <Button type="button" variant="destructive" size="sm" onClick={removeSelectedModule}>
-                Remover módulo
-              </Button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateSelectedModule({
+                    width: clamp(round(selectedModule.width * 0.9), 2, 30),
+                    height: clamp(round(selectedModule.height * 0.9), 4, 45),
+                  })}
+                >
+                  Diminuir
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateSelectedModule({
+                    width: clamp(round(selectedModule.width * 1.1), 2, 30),
+                    height: clamp(round(selectedModule.height * 1.1), 4, 45),
+                  })}
+                >
+                  Aumentar
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={duplicateSelectedModule}>
+                  Duplicar
+                </Button>
+                <Button type="button" variant="destructive" size="sm" onClick={removeSelectedModule}>
+                  Excluir módulo
+                </Button>
+              </div>
+
+              <p className="text-[11px] leading-relaxed text-slate-500">
+                Use rotação, Skew X e Skew Y para encaixar o SVG na perspectiva do telhado. O preto do módulo permanece fixo; somente a parte colorida acompanha a cor da string.
+              </p>
             </div>
           ) : (
             <p className="border-t border-brand-border pt-4 text-xs text-slate-500">
-              Selecione um módulo para ajustar posição, rotação e string.
+              Selecione um módulo para ajustar posição, tamanho, rotação, perspectiva e string.
             </p>
           )}
         </div>

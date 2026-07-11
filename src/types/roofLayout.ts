@@ -11,10 +11,13 @@ export interface RoofLayoutModule {
   width: number;
   height: number;
   rotation: number;
+  skewX: number;
+  skewY: number;
   stringId: string;
 }
 
 export interface RoofLayoutData {
+  version?: number;
   modules: RoofLayoutModule[];
   strings: RoofLayoutString[];
   canvasWidth?: number;
@@ -28,6 +31,7 @@ export const DEFAULT_ROOF_LAYOUT_STRINGS: RoofLayoutString[] = [
 ];
 
 export const EMPTY_ROOF_LAYOUT: RoofLayoutData = {
+  version: 1,
   modules: [],
   strings: DEFAULT_ROOF_LAYOUT_STRINGS,
 };
