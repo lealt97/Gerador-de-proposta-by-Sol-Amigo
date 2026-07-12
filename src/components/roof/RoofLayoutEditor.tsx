@@ -27,8 +27,15 @@ type DragState = {
   createdModule?: RoofLayoutModule;
 };
 
+type ContextMenuState = {
+  x: number;
+  y: number;
+  moduleIds: string[];
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const round = (value: number) => Number(value.toFixed(2));
+const STRING_COLORS = ['#9333EA', '#EA580C', '#0891B2', '#4D7C0F', '#2563EB', '#DC2626', '#16A34A'];
 
 function normalizeLayout(value?: RoofLayoutData | null): RoofLayoutData {
   const strings = value?.strings?.length ? value.strings : DEFAULT_ROOF_LAYOUT_STRINGS;
@@ -54,6 +61,11 @@ function countModulesByString(modules: RoofLayoutModule[], stringId: string) {
   return modules.filter((module) => module.stringId === stringId).length;
 }
 
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return !!target.closest('input, textarea, select, [contenteditable="true"]');
+}
+
 export function RoofLayoutEditor({
   value,
   onChange,
@@ -66,6 +78,8 @@ export function RoofLayoutEditor({
   const layout = normalizeLayout(value);
   const [selectedStringId, setSelectedStringId] = useState(layout.strings[0]?.id || 'string-1');
   const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>(layout.modules[0]?.id ? [layout.modules[0].id] : []);
+  const [moduleClipboard, setModuleClipboard] = useState<RoofLayoutModule[]>([]);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const validSelectedModuleIds = useMemo(
     () => selectedModuleIds.filter((id) => layout.modules.some((module) => module.id === id)),
@@ -110,6 +124,15 @@ export function RoofLayoutEditor({
     stringId: selectedStringId,
   });
 
+  const createString = (): RoofLayoutString => {
+    const index = layout.strings.length + 1;
+    return {
+      id: `string-${Date.now()}`,
+      name: `String ${index}`,
+      color: STRING_COLORS[(index - 1) % STRING_COLORS.length],
+    };
+  };
+
   const addModule = () => {
     const index = layout.modules.length;
     const nextModule = createModule(index, 5 + (index % 8) * 8, 8 + Math.floor(index / 8) * 15);
@@ -132,35 +155,54 @@ export function RoofLayoutEditor({
     if (validSelectedModuleIds.length === 0) return;
     updateModules(layout.modules.filter((module) => !validSelectedModuleIds.includes(module.id)));
     setSelectedModuleIds([]);
+    setContextMenu(null);
   };
 
   const duplicateSelectedModules = () => {
     if (selectedModules.length === 0) return;
 
+    const timestamp = Date.now();
     const duplicates = selectedModules.map((module, index) => ({
       ...module,
-      id: `mod-${Date.now()}-${index}`,
+      id: `mod-${timestamp}-${index}`,
       x: clamp(module.x + 2, 0, 100 - module.width),
       y: clamp(module.y + 2, 0, 100 - module.height),
     }));
 
     updateModules([...layout.modules, ...duplicates]);
     setSelectedModuleIds(duplicates.map((module) => module.id));
+    setContextMenu(null);
+  };
+
+  const copySelectedModules = () => {
+    if (selectedModules.length === 0) return;
+    setModuleClipboard(selectedModules.map((module) => ({ ...module })));
+  };
+
+  const pasteModules = () => {
+    if (moduleClipboard.length === 0) return;
+
+    const timestamp = Date.now();
+    const pastedModules = moduleClipboard.map((module, index) => ({
+      ...module,
+      id: `mod-${timestamp}-${index}`,
+      x: clamp(module.x + 3, 0, 100 - module.width),
+      y: clamp(module.y + 3, 0, 100 - module.height),
+    }));
+
+    updateModules([...layout.modules, ...pastedModules]);
+    setSelectedModuleIds(pastedModules.map((module) => module.id));
+    setContextMenu(null);
   };
 
   const clearModules = () => {
     updateModules([]);
     setSelectedModuleIds([]);
+    setContextMenu(null);
   };
 
   const addString = () => {
-    const index = layout.strings.length + 1;
-    const colors = ['#9333EA', '#EA580C', '#0891B2', '#4D7C0F'];
-    const nextString = {
-      id: `string-${Date.now()}`,
-      name: `String ${index}`,
-      color: colors[index % colors.length],
-    };
+    const nextString = createString();
     updateStrings([...layout.strings, nextString]);
     setSelectedStringId(nextString.id);
   };
@@ -210,6 +252,39 @@ export function RoofLayoutEditor({
           : module
       )
     );
+  };
+
+  const assignStringToModules = (stringId: string, moduleIds = validSelectedModuleIds) => {
+    if (moduleIds.length === 0) return;
+
+    commitLayout({
+      ...layout,
+      modules: layout.modules.map((module) =>
+        moduleIds.includes(module.id) ? { ...module, stringId } : module
+      ),
+    });
+
+    setSelectedStringId(stringId);
+    setSelectedModuleIds(moduleIds);
+    setContextMenu(null);
+  };
+
+  const createStringAndAssignToModules = (moduleIds = validSelectedModuleIds) => {
+    if (moduleIds.length === 0) return;
+
+    const nextString = createString();
+
+    commitLayout({
+      ...layout,
+      strings: [...layout.strings, nextString],
+      modules: layout.modules.map((module) =>
+        moduleIds.includes(module.id) ? { ...module, stringId: nextString.id } : module
+      ),
+    });
+
+    setSelectedStringId(nextString.id);
+    setSelectedModuleIds(moduleIds);
+    setContextMenu(null);
   };
 
   const resizeSelectedModules = (factor: number) => {
@@ -273,6 +348,8 @@ export function RoofLayoutEditor({
       setSelectedModuleIds(nextSelectedIds);
     }
 
+    setContextMenu(null);
+
     dragRef.current = {
       id: activeModule.id,
       offsetX: event.clientX - moduleLeft,
@@ -302,6 +379,22 @@ export function RoofLayoutEditor({
     setSelectedModuleIds([moduleId]);
   };
 
+  const handleModuleContextMenu = (event: MouseEvent<HTMLButtonElement>, moduleId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const moduleIds = validSelectedModuleIds.includes(moduleId)
+      ? validSelectedModuleIds
+      : [moduleId];
+
+    setSelectedModuleIds(moduleIds);
+    setContextMenu({
+      x: clamp(event.clientX, 8, window.innerWidth - 240),
+      y: clamp(event.clientY, 8, window.innerHeight - 260),
+      moduleIds,
+    });
+  };
+
   const handleModuleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     if (validSelectedModuleIds.length === 0) return;
@@ -309,6 +402,38 @@ export function RoofLayoutEditor({
     event.preventDefault();
     event.stopPropagation();
     removeSelectedModules();
+  };
+
+  const handleEditorKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isEditableTarget(event.target)) return;
+
+    const key = event.key.toLowerCase();
+    const isModifierPressed = event.ctrlKey || event.metaKey;
+
+    if ((event.key === 'Delete' || event.key === 'Backspace') && validSelectedModuleIds.length > 0) {
+      event.preventDefault();
+      removeSelectedModules();
+      return;
+    }
+
+    if (!isModifierPressed) return;
+
+    if (key === 'c' && selectedModules.length > 0) {
+      event.preventDefault();
+      copySelectedModules();
+      return;
+    }
+
+    if (key === 'v' && moduleClipboard.length > 0) {
+      event.preventDefault();
+      pasteModules();
+      return;
+    }
+
+    if (key === 'd' && selectedModules.length > 0) {
+      event.preventDefault();
+      duplicateSelectedModules();
+    }
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -349,9 +474,15 @@ export function RoofLayoutEditor({
   };
 
   const stringColor = (stringId: string) => layout.strings.find((string) => string.id === stringId)?.color || '#2563EB';
+  const nextStringName = `String ${layout.strings.length + 1}`;
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4 outline-none"
+      tabIndex={0}
+      onKeyDown={handleEditorKeyDown}
+      onClick={() => setContextMenu(null)}
+    >
       <div className="rounded-xl border border-brand-border bg-white p-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1 lg:w-64">
@@ -373,7 +504,7 @@ export function RoofLayoutEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Dica: use Ctrl/Shift + clique para selecionar vários módulos. Use Ctrl + Alt + clique e arraste para copiar. Clique no módulo e pressione Delete para excluir.
+          Dica: Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Delete exclui. Botão direito troca ou cria string.
         </p>
       </div>
 
@@ -432,6 +563,7 @@ export function RoofLayoutEditor({
                 type="button"
                 onPointerDown={(event) => handlePointerDown(event, module)}
                 onClick={(event) => handleModuleClick(event, module.id)}
+                onContextMenu={(event) => handleModuleContextMenu(event, module.id)}
                 onKeyDown={handleModuleKeyDown}
                 className={`absolute cursor-move bg-transparent p-0 transition-shadow ${isSelected ? 'outline outline-2 outline-brand-blue shadow-lg' : ''}`}
                 style={{
@@ -458,6 +590,9 @@ export function RoofLayoutEditor({
             </p>
             {selectedCount > 1 && (
               <p className="mt-1 text-xs font-medium text-brand-blue">{selectedCount} módulos selecionados para edição em lote</p>
+            )}
+            {moduleClipboard.length > 0 && (
+              <p className="mt-1 text-xs text-slate-500">{moduleClipboard.length} módulos copiados</p>
             )}
           </div>
 
@@ -635,6 +770,45 @@ export function RoofLayoutEditor({
           )}
         </aside>
       </div>
+
+      {contextMenu && (
+        <div
+          className="fixed z-50 w-60 overflow-hidden rounded-xl border border-brand-border bg-white shadow-xl"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <div className="border-b border-brand-border px-3 py-2">
+            <p className="text-xs font-semibold text-brand-dark">Adicionar à string</p>
+            <p className="text-[11px] text-slate-500">
+              {contextMenu.moduleIds.length} módulo{contextMenu.moduleIds.length > 1 ? 's' : ''} selecionado{contextMenu.moduleIds.length > 1 ? 's' : ''}
+            </p>
+          </div>
+
+          <div className="py-1">
+            {layout.strings.map((string) => (
+              <button
+                key={string.id}
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-brand-dark hover:bg-slate-50"
+                onClick={() => assignStringToModules(string.id, contextMenu.moduleIds)}
+              >
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: string.color }} />
+                <span className="min-w-0 flex-1 truncate">{string.name}</span>
+                <span className="text-slate-400">{countModulesByString(layout.modules, string.id)}</span>
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-2 border-t border-brand-border px-3 py-2 text-left text-xs font-medium text-brand-blue hover:bg-slate-50"
+              onClick={() => createStringAndAssignToModules(contextMenu.moduleIds)}
+            >
+              Criar {nextStringName} e adicionar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
