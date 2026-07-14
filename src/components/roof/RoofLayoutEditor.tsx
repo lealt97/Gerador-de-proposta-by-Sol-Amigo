@@ -300,6 +300,21 @@ export function RoofLayoutEditor({
     );
   };
 
+  const moveSelectedModules = (deltaX: number, deltaY: number) => {
+    if (validSelectedModuleIds.length === 0) return;
+    updateModules(
+      layout.modules.map((module) =>
+        validSelectedModuleIds.includes(module.id)
+          ? {
+              ...module,
+              x: clamp(round(module.x + deltaX), 0, 100 - module.width),
+              y: clamp(round(module.y + deltaY), 0, 100 - module.height),
+            }
+          : module
+      )
+    );
+  };
+
   const resetSelectedPerspective = () => {
     updateSelectedModules({ rotation: 0, skewX: 0, skewY: 0 });
   };
@@ -429,6 +444,20 @@ export function RoofLayoutEditor({
       return;
     }
 
+    const arrowMove = {
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+    }[event.key] as [number, number] | undefined;
+
+    if (arrowMove && selectedModules.length > 0 && !isModifierPressed) {
+      const step = event.shiftKey ? 2 : 0.5;
+      event.preventDefault();
+      moveSelectedModules(arrowMove[0] * step, arrowMove[1] * step);
+      return;
+    }
+
     if (!isModifierPressed) return;
 
     if (key === 'c' && selectedModules.length > 0) {
@@ -530,7 +559,7 @@ export function RoofLayoutEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Dica: Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Ctrl+Alt + clique e arraste copia o conjunto selecionado.
+          Dica: Ctrl/Shift + clique seleciona vários. Setas movem, Shift+setas move rápido. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Ctrl+Alt + clique e arraste copia o conjunto selecionado.
         </p>
       </div>
 
