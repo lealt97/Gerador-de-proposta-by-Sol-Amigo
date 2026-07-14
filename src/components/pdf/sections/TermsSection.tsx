@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from '@react-pdf/renderer';
+import { View, Text, StyleSheet } from '@react-pdf/renderer';
 import { Proposal } from '../../../types/proposal';
 
 const styles = StyleSheet.create({
@@ -36,62 +36,10 @@ const styles = StyleSheet.create({
   },
   itemContainer: {
     position: 'relative',
-  },
-  signatureBox: {
-    marginTop: 30,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopStyle: 'solid',
-    borderTopColor: '#e4e4e7',
-  },
-  signatureHeader: {
-    fontSize: 9,
-    color: '#71717a',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  signatureImage: {
-    width: 175,
-    height: 62,
-    objectFit: 'contain',
-    marginBottom: 2,
-  },
-  signatureLine: {
-    width: 220,
-    height: 1,
-    backgroundColor: '#a1a1aa',
-    marginTop: 44,
-    marginBottom: 8,
-  },
-  sellerName: {
-    fontSize: 12,
-    color: '#18181b',
-    fontWeight: 'bold',
-  },
-  sellerRole: {
-    fontSize: 9,
-    color: '#3b82f6',
-    marginTop: 2,
-    fontWeight: 'bold',
-  },
-  sellerMeta: {
-    fontSize: 9,
-    color: '#52525b',
-    marginTop: 2,
-  },
+  }
 });
 
-const getSellerName = (proposal: Proposal) =>
-  proposal.profile?.seller_name || proposal.profile?.company_name || 'Responsável comercial';
-
 export const TermsSection = ({ proposal }: { proposal: Proposal }) => {
-  const sellerName = getSellerName(proposal);
-  const companyName = proposal.profile?.company_name || '';
-  const sellerPhone = proposal.profile?.seller_phone || '';
-  const sellerEmail = proposal.profile?.seller_email || proposal.profile?.company_email || '';
-  const signatureUrl = proposal.profile?.seller_signature_url || null;
-
   return (
     <View style={{ marginBottom: 40 }}>
       <Text style={styles.sectionTitle}>Escopo e Condições Gerais</Text>
@@ -136,20 +84,6 @@ export const TermsSection = ({ proposal }: { proposal: Proposal }) => {
       <View style={styles.itemContainer}>
         <View style={styles.bullet}></View>
         <Text style={styles.listItem}>Obrigações civis de estrutura do telhado, alvenaria ou adequação do padrão de entrada não estão inclusas (salvo se descrito em contrato).</Text>
-      </View>
-
-      <View style={styles.signatureBox} wrap={false}>
-        <Text style={styles.signatureHeader}>Representante comercial</Text>
-        {signatureUrl ? (
-          <Image src={signatureUrl} style={styles.signatureImage} />
-        ) : (
-          <View style={styles.signatureLine} />
-        )}
-        <Text style={styles.sellerName}>{sellerName}</Text>
-        <Text style={styles.sellerRole}>Representante comercial</Text>
-        {companyName ? <Text style={styles.sellerMeta}>{companyName}</Text> : null}
-        {sellerPhone ? <Text style={styles.sellerMeta}>WhatsApp: {sellerPhone}</Text> : null}
-        {sellerEmail ? <Text style={styles.sellerMeta}>{sellerEmail}</Text> : null}
       </View>
     </View>
   );
