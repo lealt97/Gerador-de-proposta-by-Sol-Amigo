@@ -1,11 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, Svg, Line, G, Path, Text as SvgText } from '@react-pdf/renderer';
 import { Proposal } from '../../../types/proposal';
-import { DEFAULT_ROOF_LAYOUT_STRINGS, RoofLayoutData, RoofLayoutModule } from '../../../types/roofLayout';
+import { DEFAULT_ROOF_LAYOUT_STRINGS, RoofLayoutData, RoofLayoutModule, RoofLayoutPerspective } from '../../../types/roofLayout';
 import { getSectionTitleStyle, usePdfTheme } from '../pdfTheme';
 
-const MODULE_BLACK_PATH = 'M7.93432 14.0423L0.770895 1.79815V30.2416H15.2291V1.77802L7.93432 14.0423ZM16 31H0V0H16V31Z';
-const MODULE_ACCENT_PATH = 'M0.770895 1.79815V30.2416H15.2291V1.77802L7.93432 14.0423L0.770895 1.79815Z';
+const DEFAULT_PERSPECTIVE: RoofLayoutPerspective = {
+  topLeftX: 0,
+  topLeftY: 0,
+  topRightX: 0,
+  topRightY: 0,
+  bottomRightX: 0,
+  bottomRightY: 0,
+  bottomLeftX: 0,
+  bottomLeftY: 0,
+};
+const PERSPECTIVE_LIMIT = 45;
 
 const styles = StyleSheet.create({
   sectionTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, color: '#18181b', borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: '#3b82f6', paddingBottom: 5 },
@@ -57,11 +66,20 @@ const formatArea = (val: number | null | undefined) => {
   return `${val.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m²`;
 };
 
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
 const sourceLabel: Record<string, string> = {
   average: 'Consumo médio informado',
   historical: 'Histórico de consumo',
   load_survey: 'Levantamento de cargas',
 };
+
+function normalizePerspective(value?: Partial<RoofLayoutPerspective> | null): RoofLayoutPerspective {
+  return {
+    ...DEFAULT_PERSPECTIVE,
+    ...value,
+  };
+}
 
 function buildFallbackLayout(moduleCount: number): RoofLayoutData {
   const count = Math.min(Math.max(moduleCount || 8, 4), 24);
@@ -75,6 +93,7 @@ function buildFallbackLayout(moduleCount: number): RoofLayoutData {
     rotation: 0,
     skewX: 0,
     skewY: 0,
+    perspective: DEFAULT_PERSPECTIVE,
     stringId: strings[index % strings.length].id,
   }));
 
@@ -93,7 +112,37 @@ function getNormalizedModule(module: RoofLayoutModule): RoofLayoutModule {
     rotation: module.rotation || 0,
     skewX: module.skewX || 0,
     skewY: module.skewY || 0,
+    perspective: normalizePerspective(module.perspective),
   };
+}
+
+function getModulePerspectivePoints(module: RoofLayoutModule) {
+  const perspective = normalizePerspective(module.perspective);
+  const toX = (value: number) => (value / 100) * module.width;
+  const toY = (value: number) => (value / 100) * module.height;
+
+  return [
+    { x: toX(clamp(perspective.topLeftX, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT)), y: toY(clamp(perspective.topLeftY, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT)) },
+    { x: toX(clamp(100 + perspective.topRightX, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT)), y: toY(clamp(perspective.topRightY, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT)) },
+    { x: toX(clamp(100 + perspective.bottomRightX, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT)), y: toY(clamp(100 + perspective.bottomRightY, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT)) },
+    { x: toX(clamp(perspective.bottomLeftX, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT)), y: toY(clamp(100 + perspective.bottomLeftY, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT)) },
+  ];
+}
+
+function pathFromPoints(points: Array<{ x: number; y: number }>) {
+  return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y} L ${points[2].x} ${points[2].y} L ${points[3].x} ${points[3].y} Z`;
+}
+
+function getInsetPoints(points: Array<{ x: number; y: number }>, inset = 0.16) {
+  const center = points.reduce(
+    (acc, point) => ({ x: acc.x + point.x / points.length, y: acc.y + point.y / points.length }),
+    { x: 0, y: 0 }
+  );
+
+  return points.map((point) => ({
+    x: point.x + (center.x - point.x) * inset,
+    y: point.y + (center.y - point.y) * inset,
+  }));
 }
 
 function RoofPlanSvg({ layout, showLabels = false, overlay = false }: { layout: RoofLayoutData; showLabels?: boolean; overlay?: boolean }) {
@@ -118,19 +167,22 @@ function RoofPlanSvg({ layout, showLabels = false, overlay = false }: { layout: 
       {modules.map((module, index) => {
         const color = getStringColor(layout, module.stringId, '#B8B608');
         const moduleTransform = `translate(${module.x} ${module.y}) rotate(${module.rotation} ${module.width / 2} ${module.height / 2}) skewX(${module.skewX}) skewY(${module.skewY})`;
-        const scaleTransform = `scale(${module.width / 16} ${module.height / 31})`;
+        const outerPoints = getModulePerspectivePoints(module);
+        const innerPoints = getInsetPoints(outerPoints);
+        const center = outerPoints.reduce(
+          (acc, point) => ({ x: acc.x + point.x / outerPoints.length, y: acc.y + point.y / outerPoints.length }),
+          { x: 0, y: 0 }
+        );
 
         return (
           <G key={module.id} transform={moduleTransform}>
-            <G transform={scaleTransform}>
-              <Path d={MODULE_BLACK_PATH} fill="#000000" />
-              <Path d={MODULE_ACCENT_PATH} fill={color} />
-              {showLabels && (
-                <SvgText x={8} y={29} fontSize={3} textAnchor="middle" fill="#000000">
-                  {index + 1}
-                </SvgText>
-              )}
-            </G>
+            <Path d={pathFromPoints(outerPoints)} fill="#000000" />
+            <Path d={pathFromPoints(innerPoints)} fill={color} />
+            {showLabels && (
+              <SvgText x={center.x} y={center.y + 1.2} fontSize={3} textAnchor="middle" fill="#000000">
+                {index + 1}
+              </SvgText>
+            )}
           </G>
         );
       })}
