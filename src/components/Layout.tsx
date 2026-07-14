@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Sun, LayoutDashboard, Users, FileText, PlusCircle, PenTool, Settings, LogOut, Menu } from "lucide-react";
+import { Sun, LayoutDashboard, Users, FileText, PlusCircle, PenTool, Settings, LogOut, Menu, Package } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/Button";
 
@@ -20,9 +20,9 @@ export function Layout() {
     { path: '/clientes', label: 'Clientes', icon: Users },
     { path: '/propostas', label: 'Propostas', icon: FileText },
     { path: '/propostas/nova', label: 'Nova Proposta', icon: PlusCircle },
+    { path: '/kits-solares', label: 'Kits Solares', icon: Package },
     { path: '/design-pdf', label: 'Design PDF', icon: PenTool },
     { path: '/configuracoes', label: 'Configurações da Conta', icon: Settings },
-    { path: '/configuracoes/assinatura', label: 'Assinatura do Vendedor', icon: PenTool },
   ];
 
   const getPageTitle = () => {
