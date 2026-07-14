@@ -1,7 +1,6 @@
 import { KeyboardEvent, MouseEvent, PointerEvent, useMemo, useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
-import { RoofModuleSvg } from './RoofModuleSvg';
 import {
   DEFAULT_ROOF_LAYOUT_STRINGS,
   EMPTY_ROOF_LAYOUT,
@@ -42,6 +41,8 @@ type PerspectivePoint = {
   y: number;
 };
 
+type SvgPoint = { x: number; y: number };
+
 type PerspectiveDragState = {
   moduleId: string;
   corner: PerspectiveCorner;
@@ -56,6 +57,9 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const round = (value: number) => Number(value.toFixed(2));
 const STRING_COLORS = ['#9333EA', '#EA580C', '#0891B2', '#4D7C0F', '#2563EB', '#DC2626', '#16A34A'];
 const PERSPECTIVE_LIMIT = 45;
+const MODULE_VIEWBOX_WIDTH = 16;
+const MODULE_VIEWBOX_HEIGHT = 31;
+
 const DEFAULT_PERSPECTIVE: RoofLayoutPerspective = {
   topLeftX: 0,
   topLeftY: 0,
@@ -138,8 +142,60 @@ function getModulePerspectivePoints(module: RoofLayoutModule): PerspectivePoint[
   ];
 }
 
-function pathFromPoints(points: PerspectivePoint[]) {
+function pathFromPoints(points: SvgPoint[]) {
   return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y} L ${points[2].x} ${points[2].y} L ${points[3].x} ${points[3].y} Z`;
+}
+
+function mapOriginalModulePoint(points: PerspectivePoint[], x: number, y: number): SvgPoint {
+  const u = x / MODULE_VIEWBOX_WIDTH;
+  const v = y / MODULE_VIEWBOX_HEIGHT;
+  const topLeft = points[0];
+  const topRight = points[1];
+  const bottomRight = points[2];
+  const bottomLeft = points[3];
+
+  const top = {
+    x: topLeft.x + (topRight.x - topLeft.x) * u,
+    y: topLeft.y + (topRight.y - topLeft.y) * u,
+  };
+  const bottom = {
+    x: bottomLeft.x + (bottomRight.x - bottomLeft.x) * u,
+    y: bottomLeft.y + (bottomRight.y - bottomLeft.y) * u,
+  };
+
+  return {
+    x: round(top.x + (bottom.x - top.x) * v),
+    y: round(top.y + (bottom.y - top.y) * v),
+  };
+}
+
+function originalModuleShape(points: PerspectivePoint[]) {
+  const map = (x: number, y: number) => mapOriginalModulePoint(points, x, y);
+
+  const outer = [
+    map(0, 0),
+    map(16, 0),
+    map(16, 31),
+    map(0, 31),
+  ];
+
+  const accent = [
+    map(0.770895, 1.79815),
+    map(0.770895, 30.2416),
+    map(15.2291, 30.2416),
+    map(15.2291, 1.77802),
+    map(7.93432, 14.0423),
+  ];
+
+  const center = map(7.93432, 21.6);
+  const upperRidge = [map(0.770895, 1.79815), map(7.93432, 14.0423), map(15.2291, 1.77802)];
+  const lowerRidge = [map(0.770895, 30.2416), map(7.93432, 14.0423), map(15.2291, 30.2416)];
+
+  return { outer, accent, center, upperRidge, lowerRidge };
+}
+
+function pointsToPolyline(points: SvgPoint[]) {
+  return points.map((point) => `${point.x},${point.y}`).join(' ');
 }
 
 export function RoofLayoutEditor({
@@ -703,7 +759,7 @@ export function RoofLayoutEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Dica: Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Setas movem, Shift+setas move rápido. Arraste os pontos azuis para ajustar a perspectiva real do telhado.
+          Dica: Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Setas movem, Shift+setas move rápido. Arraste os pontos azuis para deformar o módulo na perspectiva real do telhado.
         </p>
       </div>
 
@@ -756,6 +812,7 @@ export function RoofLayoutEditor({
             const color = stringColor(module.stringId);
             const isSelected = validSelectedModuleIds.includes(module.id);
             const perspectivePoints = getModulePerspectivePoints(module);
+            const moduleShape = originalModuleShape(perspectivePoints);
 
             return (
               <button
@@ -776,13 +833,16 @@ export function RoofLayoutEditor({
                 }}
                 title={`Módulo ${index + 1}`}
               >
-                <RoofModuleSvg color={color} label={`${index + 1}`} className="h-full w-full drop-shadow-sm" />
-
-                {isSelected && (
-                  <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <path d={pathFromPoints(perspectivePoints)} fill="none" stroke="#0076DD" strokeWidth="3" vectorEffect="non-scaling-stroke" />
-                  </svg>
-                )}
+                <svg className="h-full w-full overflow-visible drop-shadow-sm" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <path d={pathFromPoints(moduleShape.outer)} fill="#000000" />
+                  <path d={pathFromPoints(moduleShape.accent)} fill={color} />
+                  <polyline points={pointsToPolyline(moduleShape.upperRidge)} fill="none" stroke="#000000" strokeWidth="1.6" opacity="0.18" vectorEffect="non-scaling-stroke" />
+                  <polyline points={pointsToPolyline(moduleShape.lowerRidge)} fill="none" stroke="#000000" strokeWidth="1.6" opacity="0.18" vectorEffect="non-scaling-stroke" />
+                  <text x={moduleShape.center.x} y={moduleShape.center.y} textAnchor="middle" fontSize="9" fontFamily="Arial, sans-serif" fill="#000000">
+                    {index + 1}
+                  </text>
+                  {isSelected && <path d={pathFromPoints(perspectivePoints)} fill="none" stroke="#0076DD" strokeWidth="3" vectorEffect="non-scaling-stroke" />}
+                </svg>
 
                 {isSelected && perspectivePoints.map((point) => (
                   <span
@@ -875,7 +935,7 @@ export function RoofLayoutEditor({
                   {selectedCount > 1 && (
                     <p className="text-xs text-slate-500">Largura, altura, rotação, skew e string serão aplicados em todos.</p>
                   )}
-                  <p className="mt-1 text-xs text-slate-500">Arraste os 4 pontos azuis no módulo para ajustar a área de encaixe no telhado sem alterar o SVG original.</p>
+                  <p className="mt-1 text-xs text-slate-500">Arraste os 4 pontos azuis para deformar o próprio módulo e encaixar na perspectiva real.</p>
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={resetSelectedPerspective}>
                   Resetar
@@ -988,7 +1048,7 @@ export function RoofLayoutEditor({
               </div>
 
               <p className="text-[11px] leading-relaxed text-slate-500">
-                O SVG original do módulo foi preservado. Os pontos azuis ajustam apenas a borda/área de encaixe visual; o reset limpa rotação, skew e perspectiva 4 pontos.
+                Agora a perspectiva deforma a geometria original do módulo, preservando a identidade do SVG e alterando a forma do painel no encaixe.
               </p>
             </div>
           ) : (
