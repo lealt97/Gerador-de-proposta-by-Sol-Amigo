@@ -260,6 +260,11 @@ export function RoofLayoutEditor({
     commitLayout({ ...layout, strings });
   };
 
+  const clearSelection = () => {
+    setSelectedModuleIds([]);
+    setContextMenu(null);
+  };
+
   const createModule = (index: number, x: number, y: number): RoofLayoutModule => ({
     id: `mod-${Date.now()}-${index}`,
     x: clamp(x, 0, 94),
@@ -301,8 +306,7 @@ export function RoofLayoutEditor({
   const removeSelectedModules = () => {
     if (validSelectedModuleIds.length === 0) return;
     updateModules(layout.modules.filter((module) => !validSelectedModuleIds.includes(module.id)));
-    setSelectedModuleIds([]);
-    setContextMenu(null);
+    clearSelection();
   };
 
   const duplicateSelectedModules = () => {
@@ -346,8 +350,7 @@ export function RoofLayoutEditor({
 
   const clearModules = () => {
     updateModules([]);
-    setSelectedModuleIds([]);
-    setContextMenu(null);
+    clearSelection();
   };
 
   const addString = () => {
@@ -503,6 +506,11 @@ export function RoofLayoutEditor({
     }));
   };
 
+  const handleCanvasPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    clearSelection();
+  };
+
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>, module: RoofLayoutModule) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -558,10 +566,13 @@ export function RoofLayoutEditor({
     };
 
     event.preventDefault();
+    event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handleModuleClick = (event: MouseEvent<HTMLButtonElement>, moduleId: string) => {
+    event.stopPropagation();
+
     if (event.ctrlKey && event.altKey) return;
 
     if (event.shiftKey || event.metaKey || event.ctrlKey) {
@@ -774,13 +785,14 @@ export function RoofLayoutEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Dica: Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Setas movem, Shift+setas move rápido. Arraste os pontos azuis para deformar o SVG original do módulo.
+          Dica: clique fora dos módulos para desselecionar. Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Setas movem, Shift+setas move rápido. Arraste os pontos azuis para deformar o SVG original do módulo.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
         <div
           ref={canvasRef}
+          onPointerDown={handleCanvasPointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={stopDragging}
           onPointerLeave={stopDragging}
@@ -792,12 +804,12 @@ export function RoofLayoutEditor({
           }}
         >
           {!roofImageUrl && (
-            <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-500">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-500">
               Envie a foto do telhado ou informe uma URL para posicionar os módulos sobre a imagem.
             </div>
           )}
 
-          <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             {layout.strings.map((string) => {
               const modules = layout.modules.filter((module) => module.stringId === string.id);
               return modules.slice(1).map((module, index) => {
@@ -948,7 +960,7 @@ export function RoofLayoutEditor({
                   {selectedCount > 1 && (
                     <p className="text-xs text-slate-500">Largura, altura, rotação, skew e string serão aplicados em todos.</p>
                   )}
-                  <p className="mt-1 text-xs text-slate-500">Arraste os 4 pontos azuis para deformar o SVG antigo do módulo.</p>
+                  <p className="mt-1 text-xs text-slate-500">Arraste os 4 pontos azuis para deformar o próprio módulo e encaixar na perspectiva real.</p>
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={resetSelectedPerspective}>
                   Resetar
@@ -1061,7 +1073,7 @@ export function RoofLayoutEditor({
               </div>
 
               <p className="text-[11px] leading-relaxed text-slate-500">
-                A perspectiva agora deforma as coordenadas dos paths originais do SVG, em vez de substituir o módulo por um modelo novo.
+                Agora a perspectiva deforma o SVG original do módulo. Para sair da seleção, clique em uma área vazia da foto.
               </p>
             </div>
           ) : (
