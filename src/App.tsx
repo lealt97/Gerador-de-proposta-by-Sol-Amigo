@@ -24,6 +24,7 @@ import { ProposalDetails } from "./pages/propostas/ProposalDetails";
 import { DesignPdf } from "./pages/design-pdf/DesignPdf";
 import { PublicProposal } from "./pages/public/PublicProposal";
 import { Configuracoes } from "./pages/Configuracoes";
+import { SolarKitCatalog } from "./pages/kits/SolarKitCatalog";
 
 function Home() {
   return <Navigate to="/dashboard" replace />;
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="propostas/nova" element={<ProposalWizard />} />
               <Route path="propostas/:id" element={<ProposalDetails />} />
               <Route path="propostas/:id/editar" element={<ProposalWizard />} />
+              <Route path="kits-solares" element={<SolarKitCatalog />} />
               <Route path="design-pdf" element={<DesignPdf />} />
               <Route path="configuracoes" element={<Configuracoes />} />
             </Route>
