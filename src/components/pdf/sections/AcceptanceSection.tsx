@@ -58,13 +58,20 @@ const styles = StyleSheet.create({
     width: 165,
     height: 58,
     objectFit: 'contain',
-    marginBottom: 6,
+    marginBottom: 2,
   },
   signatureLine: {
     width: '100%',
     height: 1,
     backgroundColor: '#18181b',
     marginTop: 58,
+    marginBottom: 10,
+  },
+  signatureLineBelowImage: {
+    width: '100%',
+    height: 1,
+    backgroundColor: '#18181b',
+    marginTop: 0,
     marginBottom: 10,
   },
   signatureName: {
@@ -105,7 +112,10 @@ export const AcceptanceSection = ({ proposal }: { proposal: Proposal }) => {
       <View style={styles.signatureBox} wrap={false}>
         <View style={styles.signatureLineContainer}>
           {signatureUrl ? (
-            <Image src={signatureUrl} style={styles.sellerSignatureImage} />
+            <>
+              <Image src={signatureUrl} style={styles.sellerSignatureImage} />
+              <View style={styles.signatureLineBelowImage}></View>
+            </>
           ) : (
             <View style={styles.signatureLine}></View>
           )}
