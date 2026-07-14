@@ -33,11 +33,28 @@ type ContextMenuState = {
   moduleIds: string[];
 };
 
-type PerspectivePoint = { x: number; y: number };
+type PerspectiveCorner = 'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft';
+
+type PerspectivePoint = {
+  corner: PerspectiveCorner;
+  x: number;
+  y: number;
+};
+
+type PerspectiveDragState = {
+  moduleId: string;
+  corner: PerspectiveCorner;
+  startClientX: number;
+  startClientY: number;
+  moduleWidthPx: number;
+  moduleHeightPx: number;
+  initialPerspective: RoofLayoutPerspective;
+};
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const round = (value: number) => Number(value.toFixed(2));
 const STRING_COLORS = ['#9333EA', '#EA580C', '#0891B2', '#4D7C0F', '#2563EB', '#DC2626', '#16A34A'];
+const PERSPECTIVE_LIMIT = 45;
 const DEFAULT_PERSPECTIVE: RoofLayoutPerspective = {
   topLeftX: 0,
   topLeftY: 0,
@@ -48,7 +65,13 @@ const DEFAULT_PERSPECTIVE: RoofLayoutPerspective = {
   bottomLeftX: 0,
   bottomLeftY: 0,
 };
-const PERSPECTIVE_LIMIT = 45;
+
+const CORNER_FIELDS: Record<PerspectiveCorner, { x: keyof RoofLayoutPerspective; y: keyof RoofLayoutPerspective; label: string }> = {
+  topLeft: { x: 'topLeftX', y: 'topLeftY', label: 'Superior esquerdo' },
+  topRight: { x: 'topRightX', y: 'topRightY', label: 'Superior direito' },
+  bottomRight: { x: 'bottomRightX', y: 'bottomRightY', label: 'Inferior direito' },
+  bottomLeft: { x: 'bottomLeftX', y: 'bottomLeftY', label: 'Inferior esquerdo' },
+};
 
 function normalizePerspective(value?: Partial<RoofLayoutPerspective> | null): RoofLayoutPerspective {
   return {
@@ -72,8 +95,8 @@ function normalizeLayout(value?: RoofLayoutData | null): RoofLayoutData {
       rotation: module.rotation || 0,
       skewX: module.skewX || 0,
       skewY: module.skewY || 0,
-      stringId: module.stringId || strings[0]?.id || 'string-1',
       perspective: normalizePerspective(module.perspective),
+      stringId: module.stringId || strings[0]?.id || 'string-1',
     })),
   };
 }
@@ -87,59 +110,54 @@ function isEditableTarget(target: EventTarget | null) {
   return !!target.closest('input, textarea, select, [contenteditable="true"]');
 }
 
-function getPerspectivePoints(perspective?: RoofLayoutPerspective): PerspectivePoint[] {
-  const value = normalizePerspective(perspective);
+function getModulePerspectivePoints(module: RoofLayoutModule): PerspectivePoint[] {
+  const perspective = normalizePerspective(module.perspective);
 
   return [
-    { x: clamp(value.topLeftX, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT), y: clamp(value.topLeftY, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT) },
-    { x: clamp(100 + value.topRightX, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT), y: clamp(value.topRightY, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT) },
-    { x: clamp(100 + value.bottomRightX, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT), y: clamp(100 + value.bottomRightY, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT) },
-    { x: clamp(value.bottomLeftX, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT), y: clamp(100 + value.bottomLeftY, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT) },
+    {
+      corner: 'topLeft',
+      x: clamp(perspective.topLeftX, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT),
+      y: clamp(perspective.topLeftY, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT),
+    },
+    {
+      corner: 'topRight',
+      x: clamp(100 + perspective.topRightX, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT),
+      y: clamp(perspective.topRightY, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT),
+    },
+    {
+      corner: 'bottomRight',
+      x: clamp(100 + perspective.bottomRightX, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT),
+      y: clamp(100 + perspective.bottomRightY, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT),
+    },
+    {
+      corner: 'bottomLeft',
+      x: clamp(perspective.bottomLeftX, -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT),
+      y: clamp(100 + perspective.bottomLeftY, 100 - PERSPECTIVE_LIMIT, 100 + PERSPECTIVE_LIMIT),
+    },
   ];
 }
 
-function pointsToString(points: PerspectivePoint[]) {
-  return points.map((point) => `${point.x},${point.y}`).join(' ');
+function pathFromPoints(points: PerspectivePoint[]) {
+  return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y} L ${points[2].x} ${points[2].y} L ${points[3].x} ${points[3].y} Z`;
 }
 
-function getInsetPoints(points: PerspectivePoint[], inset = 0.16) {
+function getInsetPoints(points: PerspectivePoint[], inset = 0.16): PerspectivePoint[] {
   const center = points.reduce(
     (acc, point) => ({ x: acc.x + point.x / points.length, y: acc.y + point.y / points.length }),
     { x: 0, y: 0 }
   );
 
   return points.map((point) => ({
-    x: round(point.x + (center.x - point.x) * inset),
-    y: round(point.y + (center.y - point.y) * inset),
+    ...point,
+    x: point.x + (center.x - point.x) * inset,
+    y: point.y + (center.y - point.y) * inset,
   }));
 }
 
-function PerspectiveModuleSvg({ color, label, perspective }: { color: string; label: string; perspective?: RoofLayoutPerspective }) {
-  const outerPoints = getPerspectivePoints(perspective);
-  const innerPoints = getInsetPoints(outerPoints);
-  const center = outerPoints.reduce(
-    (acc, point) => ({ x: acc.x + point.x / outerPoints.length, y: acc.y + point.y / outerPoints.length }),
+function getPointCenter(points: PerspectivePoint[]) {
+  return points.reduce(
+    (acc, point) => ({ x: acc.x + point.x / points.length, y: acc.y + point.y / points.length }),
     { x: 0, y: 0 }
-  );
-
-  return (
-    <svg className="h-full w-full drop-shadow-sm" viewBox="-45 -45 190 190" preserveAspectRatio="none" aria-hidden="true">
-      <polygon points={pointsToString(outerPoints)} fill="#000000" />
-      <polygon points={pointsToString(innerPoints)} fill={color} />
-      <polyline points={`${innerPoints[0].x},${innerPoints[0].y} ${center.x},${center.y} ${innerPoints[1].x},${innerPoints[1].y}`} fill="none" stroke="#000000" strokeWidth="1.8" opacity="0.28" />
-      <polyline points={`${innerPoints[3].x},${innerPoints[3].y} ${center.x},${center.y} ${innerPoints[2].x},${innerPoints[2].y}`} fill="none" stroke="#000000" strokeWidth="1.8" opacity="0.28" />
-      <text x={center.x} y={center.y + 9} textAnchor="middle" fontSize="16" fontFamily="Arial, sans-serif" fill="#000000">
-        {label}
-      </text>
-    </svg>
-  );
-}
-
-function SelectionBorderSvg({ perspective }: { perspective?: RoofLayoutPerspective }) {
-  return (
-    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="-45 -45 190 190" preserveAspectRatio="none" aria-hidden="true">
-      <polygon points={pointsToString(getPerspectivePoints(perspective))} fill="none" stroke="currentColor" strokeWidth="3" vectorEffect="non-scaling-stroke" className="text-brand-blue" />
-    </svg>
   );
 }
 
@@ -152,6 +170,7 @@ export function RoofLayoutEditor({
 }: RoofLayoutEditorProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const perspectiveDragRef = useRef<PerspectiveDragState | null>(null);
   const layout = normalizeLayout(value);
 
   const [selectedStringId, setSelectedStringId] = useState(layout.strings[0]?.id || 'string-1');
@@ -171,7 +190,6 @@ export function RoofLayoutEditor({
 
   const selectedModule = selectedModules[0] || null;
   const selectedCount = selectedModules.length;
-  const selectedPerspective = normalizePerspective(selectedModule?.perspective);
   const moduleArea = moduleWidthM * moduleHeightM;
   const occupiedArea = layout.modules.length * moduleArea;
 
@@ -333,17 +351,13 @@ export function RoofLayoutEditor({
     );
   };
 
-  const updateSelectedPerspective = (patch: Partial<RoofLayoutPerspective>) => {
-    if (validSelectedModuleIds.length === 0) return;
+  const updateModulePerspective = (moduleId: string, perspective: RoofLayoutPerspective) => {
     updateModules(
       layout.modules.map((module) =>
-        validSelectedModuleIds.includes(module.id)
+        module.id === moduleId
           ? {
               ...module,
-              perspective: {
-                ...normalizePerspective(module.perspective),
-                ...patch,
-              },
+              perspective,
             }
           : module
       )
@@ -531,6 +545,56 @@ export function RoofLayoutEditor({
     removeSelectedModules();
   };
 
+  const handlePerspectivePointDown = (
+    event: PointerEvent<HTMLSpanElement>,
+    module: RoofLayoutModule,
+    corner: PerspectiveCorner
+  ) => {
+    const moduleElement = event.currentTarget.closest('button');
+    if (!(moduleElement instanceof HTMLElement)) return;
+
+    const rect = moduleElement.getBoundingClientRect();
+
+    perspectiveDragRef.current = {
+      moduleId: module.id,
+      corner,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      moduleWidthPx: Math.max(rect.width, 1),
+      moduleHeightPx: Math.max(rect.height, 1),
+      initialPerspective: normalizePerspective(module.perspective),
+    };
+
+    setSelectedModuleIds([module.id]);
+    setContextMenu(null);
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePerspectivePointMove = (event: PointerEvent<HTMLSpanElement>) => {
+    const drag = perspectiveDragRef.current;
+    if (!drag) return;
+
+    const fields = CORNER_FIELDS[drag.corner];
+    const deltaX = ((event.clientX - drag.startClientX) / drag.moduleWidthPx) * 100;
+    const deltaY = ((event.clientY - drag.startClientY) / drag.moduleHeightPx) * 100;
+    const nextPerspective = {
+      ...drag.initialPerspective,
+      [fields.x]: clamp(round(Number(drag.initialPerspective[fields.x]) + deltaX), -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT),
+      [fields.y]: clamp(round(Number(drag.initialPerspective[fields.y]) + deltaY), -PERSPECTIVE_LIMIT, PERSPECTIVE_LIMIT),
+    };
+
+    event.preventDefault();
+    event.stopPropagation();
+    updateModulePerspective(drag.moduleId, nextPerspective);
+  };
+
+  const stopPerspectiveDrag = (event?: PointerEvent<HTMLSpanElement>) => {
+    perspectiveDragRef.current = null;
+    event?.stopPropagation();
+  };
+
   const handleEditorKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (isEditableTarget(event.target)) return;
 
@@ -658,7 +722,7 @@ export function RoofLayoutEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Dica: Ctrl/Shift + clique seleciona vários. Setas movem, Shift+setas move rápido. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona. Use os 4 pontos para encaixar na perspectiva real do telhado.
+          Dica: Ctrl/Shift + clique seleciona vários. Ctrl+C copia, Ctrl+V cola, Ctrl+D duplica, Ctrl+ / Ctrl- redimensiona, Delete exclui. Setas movem, Shift+setas move rápido. Arraste os pontos azuis para ajustar a perspectiva real do telhado.
         </p>
       </div>
 
@@ -710,6 +774,9 @@ export function RoofLayoutEditor({
           {layout.modules.map((module, index) => {
             const color = stringColor(module.stringId);
             const isSelected = validSelectedModuleIds.includes(module.id);
+            const perspectivePoints = getModulePerspectivePoints(module);
+            const innerPoints = getInsetPoints(perspectivePoints);
+            const center = getPointCenter(perspectivePoints);
 
             return (
               <button
@@ -719,7 +786,7 @@ export function RoofLayoutEditor({
                 onClick={(event) => handleModuleClick(event, module.id)}
                 onContextMenu={(event) => handleModuleContextMenu(event, module.id)}
                 onKeyDown={handleModuleKeyDown}
-                className={`absolute cursor-move bg-transparent p-0 transition-shadow focus:outline-none ${isSelected ? 'shadow-lg' : ''}`}
+                className={`absolute cursor-move overflow-visible bg-transparent p-0 transition-shadow focus:outline-none ${isSelected ? 'shadow-lg' : ''}`}
                 style={{
                   left: `${module.x}%`,
                   top: `${module.y}%`,
@@ -730,8 +797,35 @@ export function RoofLayoutEditor({
                 }}
                 title={`Módulo ${index + 1}`}
               >
-                <PerspectiveModuleSvg color={color} label={`${index + 1}`} perspective={module.perspective} />
-                {isSelected && <SelectionBorderSvg perspective={module.perspective} />}
+                <svg className="h-full w-full overflow-visible drop-shadow-sm" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d={pathFromPoints(perspectivePoints)} fill="#000000" />
+                  <path d={pathFromPoints(innerPoints)} fill={color} />
+                  <text x={center.x} y={center.y + 7} textAnchor="middle" fontSize="16" fontFamily="Arial, sans-serif" fill="#000000">
+                    {index + 1}
+                  </text>
+                  {isSelected && <path d={pathFromPoints(perspectivePoints)} fill="none" stroke="#0076DD" strokeWidth="3" />}
+                </svg>
+
+                {isSelected && perspectivePoints.map((point) => (
+                  <span
+                    key={`${module.id}-${point.corner}`}
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={`Ajustar perspectiva: ${CORNER_FIELDS[point.corner].label}`}
+                    title={CORNER_FIELDS[point.corner].label}
+                    className="absolute z-10 h-3 w-3 rounded-full border-2 border-white bg-brand-blue shadow-md"
+                    style={{
+                      left: `${point.x}%`,
+                      top: `${point.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: 'crosshair',
+                    }}
+                    onPointerDown={(event) => handlePerspectivePointDown(event, module, point.corner)}
+                    onPointerMove={handlePerspectivePointMove}
+                    onPointerUp={stopPerspectiveDrag}
+                    onPointerCancel={stopPerspectiveDrag}
+                  />
+                ))}
               </button>
             );
           })}
@@ -801,8 +895,9 @@ export function RoofLayoutEditor({
                     {selectedCount > 1 ? 'Módulos selecionados' : 'Módulo selecionado'}
                   </h4>
                   {selectedCount > 1 && (
-                    <p className="text-xs text-slate-500">Largura, altura, rotação, skew, perspectiva e string serão aplicados em todos.</p>
+                    <p className="text-xs text-slate-500">Largura, altura, rotação, skew e string serão aplicados em todos.</p>
                   )}
+                  <p className="mt-1 text-xs text-slate-500">Arraste os 4 pontos azuis no módulo para ajustar a perspectiva real.</p>
                 </div>
                 <Button type="button" variant="ghost" size="sm" onClick={resetSelectedPerspective}>
                   Resetar
@@ -899,47 +994,6 @@ export function RoofLayoutEditor({
                 </label>
               </div>
 
-              <div className="space-y-2 rounded-lg border border-brand-border bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-brand-dark">Perspectiva 4 pontos</p>
-                <p className="text-[11px] leading-relaxed text-slate-500">
-                  Ajuste cada canto do módulo para encaixar em telhados vistos em perspectiva. Valores negativos puxam o canto para esquerda/cima; positivos puxam para direita/baixo.
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="text-[11px] text-slate-500">
-                    Sup. Esq. X
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.topLeftX} onChange={(event) => updateSelectedPerspective({ topLeftX: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Sup. Esq. Y
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.topLeftY} onChange={(event) => updateSelectedPerspective({ topLeftY: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Sup. Dir. X
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.topRightX} onChange={(event) => updateSelectedPerspective({ topRightX: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Sup. Dir. Y
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.topRightY} onChange={(event) => updateSelectedPerspective({ topRightY: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Inf. Dir. X
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.bottomRightX} onChange={(event) => updateSelectedPerspective({ bottomRightX: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Inf. Dir. Y
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.bottomRightY} onChange={(event) => updateSelectedPerspective({ bottomRightY: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Inf. Esq. X
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.bottomLeftX} onChange={(event) => updateSelectedPerspective({ bottomLeftX: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                  <label className="text-[11px] text-slate-500">
-                    Inf. Esq. Y
-                    <input type="number" min="-45" max="45" step="1" value={selectedPerspective.bottomLeftY} onChange={(event) => updateSelectedPerspective({ bottomLeftY: clamp(Number(event.target.value) || 0, -45, 45) })} className="mt-1 w-full rounded border border-brand-border bg-white px-2 py-1 text-xs" />
-                  </label>
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => resizeSelectedModules(0.9)}>
                   Diminuir
@@ -956,7 +1010,7 @@ export function RoofLayoutEditor({
               </div>
 
               <p className="text-[11px] leading-relaxed text-slate-500">
-                Use largura/altura para proporção, rotação para direção e Perspectiva 4 pontos para deformar o módulo até acompanhar o plano real do telhado.
+                Para perspectiva real, arraste os pontos azuis dos cantos. O reset limpa rotação, skew e perspectiva 4 pontos.
               </p>
             </div>
           ) : (
