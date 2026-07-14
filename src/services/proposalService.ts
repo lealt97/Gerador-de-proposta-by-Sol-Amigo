@@ -80,6 +80,8 @@ export const proposalService = {
       estimated_daily_consumption: formatNumber(proposal.estimated_daily_consumption),
       monthly_consumption_kwh: formatNumber(proposal.monthly_consumption_kwh),
       bill_amount: formatNumber(proposal.bill_amount),
+      selected_solar_kit_id: proposal.selected_solar_kit_id || null,
+      solar_kit_snapshot: proposal.solar_kit_snapshot || null,
       roof_type: proposal.roof_type || null,
       roof_area_m2: formatNumber(proposal.roof_area_m2),
       roof_image_url: proposal.roof_image_url || null,
@@ -155,6 +157,8 @@ export const proposalService = {
     if (proposal.estimated_daily_consumption !== undefined) formattedData.estimated_daily_consumption = formatNumber(proposal.estimated_daily_consumption);
     if (proposal.monthly_consumption_kwh !== undefined) formattedData.monthly_consumption_kwh = formatNumber(proposal.monthly_consumption_kwh);
     if (proposal.bill_amount !== undefined) formattedData.bill_amount = formatNumber(proposal.bill_amount);
+    if (proposal.selected_solar_kit_id !== undefined) formattedData.selected_solar_kit_id = proposal.selected_solar_kit_id || null;
+    if (proposal.solar_kit_snapshot !== undefined) formattedData.solar_kit_snapshot = proposal.solar_kit_snapshot || null;
     if (proposal.roof_type !== undefined) formattedData.roof_type = proposal.roof_type || null;
     if (proposal.roof_area_m2 !== undefined) formattedData.roof_area_m2 = formatNumber(proposal.roof_area_m2);
     if (proposal.roof_image_url !== undefined) formattedData.roof_image_url = proposal.roof_image_url || null;
