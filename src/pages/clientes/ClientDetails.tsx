@@ -11,6 +11,45 @@ import { formatDate } from '../../lib/utils';
 import { toast } from 'sonner';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
+const OPEN_PROPOSAL_STATUSES = ['draft', 'pending'];
+
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    draft: 'Pendente',
+    pending: 'Pendente',
+    sent: 'Enviada',
+    viewed: 'Visualizada',
+    accepted: 'Aprovada',
+    approved: 'Aprovada',
+    rejected: 'Recusada',
+    expired: 'Expirada',
+  };
+
+  return labels[status] || 'Pendente';
+};
+
+const getStatusBadgeClasses = (status: string) => {
+  const styles: Record<string, string> = {
+    draft: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
+    pending: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
+    sent: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    viewed: 'bg-brand-blue/10 text-brand-blue border-brand-blue/20',
+    accepted: 'bg-brand-green/20 text-emerald-700 border-brand-green/30',
+    approved: 'bg-brand-green/20 text-emerald-700 border-brand-green/30',
+    rejected: 'bg-red-50 text-red-600 border-red-100',
+    expired: 'bg-slate-700/10 text-slate-700 border-slate-700/20',
+  };
+
+  return styles[status] || styles.pending;
+};
+
+const getLastEvent = (proposal: any) => {
+  const events = Array.isArray(proposal.proposal_events) ? proposal.proposal_events : [];
+  if (events.length === 0) return null;
+
+  return [...events].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+};
+
 export function ClientDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -19,32 +58,53 @@ export function ClientDetails() {
   const [error, setError] = useState<string | null>(null);
   const [proposals, setProposals] = useState<any[]>([]);
 
-  const draftProposals = proposals.filter((p) => p.status === 'draft');
-  const latestDraft = draftProposals.length > 0 ? draftProposals[0] : null;
-  const otherProposals = latestDraft 
-    ? proposals.filter((p) => p.id !== latestDraft.id)
-    : proposals;
+  const isOpenProposal = (proposal: any) => {
+    return OPEN_PROPOSAL_STATUSES.includes(proposal.status)
+      && !proposal.sent_whatsapp_at
+      && !proposal.public_viewed_at
+      && !proposal.accepted_at
+      && !proposal.rejected_at;
+  };
 
-  const getDraftProgress = (prop: any) => {
+  const openProposals = proposals
+    .filter(isOpenProposal)
+    .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+  const activeProposal = openProposals[0] || null;
+  const closedOrSentProposals = proposals.filter((proposal) => !isOpenProposal(proposal));
+
+  const getProposalProgress = (proposal: any) => {
     let stepIndex = 0;
-    let stepName = 'Identificação';
-    
-    if (prop.kit_cost != null && Number(prop.kit_cost) > 0) {
+    let stepName = 'Cliente';
+    const remaining: string[] = ['Local', 'Consumo', 'Dimensionamento', 'Kit Solar', 'Custos', 'Revisão'];
+
+    if (proposal.final_price != null && Number(proposal.final_price) > 0) {
+      stepIndex = 6;
+      stepName = 'Revisão';
+      remaining.splice(0, remaining.length);
+    } else if (proposal.kit_cost != null && Number(proposal.kit_cost) > 0) {
       stepIndex = 5;
-      stepName = 'Financeiro';
-    } else if (prop.roof_type || (prop.roof_area_m2 != null && Number(prop.roof_area_m2) > 0)) {
-      stepIndex = 4;
       stepName = 'Custos';
-    } else if (prop.monthly_consumption_kwh != null && Number(prop.monthly_consumption_kwh) > 0) {
+      remaining.splice(0, remaining.length, 'Revisão');
+    } else if (proposal.selected_solar_kit_id || proposal.solar_kit_snapshot) {
+      stepIndex = 4;
+      stepName = 'Kit Solar';
+      remaining.splice(0, remaining.length, 'Custos', 'Revisão');
+    } else if (proposal.monthly_consumption_kwh != null && Number(proposal.monthly_consumption_kwh) > 0) {
+      stepIndex = 3;
+      stepName = 'Dimensionamento';
+      remaining.splice(0, remaining.length, 'Kit Solar', 'Custos', 'Revisão');
+    } else if (proposal.consumption_source) {
       stepIndex = 2;
-      stepName = 'Projeto Solar';
-    } else if (prop.consumption_source) {
-      stepIndex = 1;
       stepName = 'Consumo';
+      remaining.splice(0, remaining.length, 'Dimensionamento', 'Kit Solar', 'Custos', 'Revisão');
+    } else if (proposal.roof_type || (proposal.roof_area_m2 != null && Number(proposal.roof_area_m2) > 0)) {
+      stepIndex = 1;
+      stepName = 'Local';
+      remaining.splice(0, remaining.length, 'Consumo', 'Dimensionamento', 'Kit Solar', 'Custos', 'Revisão');
     }
-    
+
     const percentage = Math.min(Math.round(((stepIndex + 1) / 7) * 100), 100);
-    return { stepName, percentage, stepIndex };
+    return { stepName, percentage, stepIndex, remaining };
   };
 
   // Custom Delete Modal State for Proposals
@@ -64,7 +124,7 @@ export function ClientDetails() {
           .from('proposals')
           .select('*, proposal_events(event_type, description, created_at)')
           .eq('client_id', id)
-          .order('created_at', { ascending: false });
+          .order('updated_at', { ascending: false });
         
         if (propsData) {
           setProposals(propsData);
@@ -77,6 +137,18 @@ export function ClientDetails() {
     }
     loadClient();
   }, [id]);
+
+  const openActiveProposal = () => {
+    if (activeProposal) {
+      const { stepIndex } = getProposalProgress(activeProposal);
+      navigate(`/propostas/${activeProposal.id}/editar?step=${stepIndex}`);
+      return;
+    }
+
+    if (client) {
+      navigate(`/propostas/nova?clienteId=${client.id}`);
+    }
+  };
 
   const triggerDeleteProposal = (proposalId: string, title: string | null) => {
     setProposalToDelete({ id: proposalId, title });
@@ -105,27 +177,9 @@ export function ClientDetails() {
   };
   
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-500 border-gray-200',
-      sent: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
-      viewed: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
-      pending: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
-      accepted: 'bg-brand-green/20 text-emerald-700 border-brand-green/30',
-      rejected: 'bg-red-50 text-red-600 border-red-100',
-      expired: 'bg-slate-700/10 text-slate-700 border-slate-700/20',
-    };
-    const labels: Record<string, string> = {
-      draft: 'Rascunho',
-      sent: 'Pendente',
-      viewed: 'Visualizada',
-      pending: 'Pendente',
-      accepted: 'Aprovada',
-      rejected: 'Recusada',
-      expired: 'Expirada',
-    };
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || styles.draft}`}>
-        {labels[status] || 'Rascunho'}
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeClasses(status)}`}>
+        {getStatusLabel(status)}
       </span>
     );
   };
@@ -147,42 +201,59 @@ export function ClientDetails() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Link to="/clientes">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-brand-dark">{client.name}</h1>
-            <p className="text-sm text-slate-500">
-              {client.document ? `Documento: ${client.document}` : 'Sem documento cadastrado'}
-            </p>
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full">
+      <div className="rounded-2xl border border-brand-border bg-brand-surface p-5 shadow-xl">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <Link to="/clientes">
+              <Button variant="ghost" size="icon" className="border border-transparent hover:border-brand-border">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-brand-blue">Cliente</p>
+              <h1 className="mt-1 text-2xl font-bold text-white tracking-tight">{client.name}</h1>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                <span className="rounded-full border border-brand-border bg-slate-950/30 px-3 py-1">
+                  Documento: {client.document || 'Não informado'}
+                </span>
+                <span className="rounded-full border border-brand-border bg-slate-950/30 px-3 py-1">
+                  {client.phone || 'Telefone não informado'}
+                </span>
+                <span className="rounded-full border border-brand-border bg-slate-950/30 px-3 py-1">
+                  {client.email || 'E-mail não informado'}
+                </span>
+                {(client.city || client.state) && (
+                  <span className="rounded-full border border-brand-border bg-slate-950/30 px-3 py-1">
+                    {[client.city, client.state].filter(Boolean).join(' - ')}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate(`/clientes/${client.id}/editar`)}
-            className="gap-2"
-          >
-            <Edit className="w-4 h-4" />
-            Editar
-          </Button>
-          <Button 
-            onClick={() => navigate(`/propostas/nova?clienteId=${client.id}`)}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Proposta
-          </Button>
+
+          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/clientes/${client.id}/editar`)}
+              className="gap-2 border-brand-border bg-white/5 text-white hover:bg-white/10"
+            >
+              <Edit className="w-4 h-4" />
+              Editar Cliente
+            </Button>
+            <Button 
+              onClick={openActiveProposal}
+              className="gap-2 bg-brand-blue text-white hover:bg-brand-blue-hover"
+            >
+              {activeProposal ? <ArrowRight className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {activeProposal ? 'Continuar Proposta' : 'Nova Proposta'}
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Contato</CardTitle>
@@ -246,170 +317,160 @@ export function ClientDetails() {
           </Card>
         </div>
 
-        <div className="md:col-span-2 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <Card className="flex-1 flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle className="text-lg">Histórico de Propostas</CardTitle>
-                <CardDescription>Propostas geradas para este cliente.</CardDescription>
+                <CardTitle className="text-lg">Propostas do Cliente</CardTitle>
+                <CardDescription>Acompanhe a proposta em andamento e o histórico comercial deste cliente.</CardDescription>
               </div>
+              <Button onClick={openActiveProposal} className="gap-2 bg-brand-blue text-white hover:bg-brand-blue-hover">
+                {activeProposal ? <ArrowRight className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                {activeProposal ? 'Continuar Proposta' : 'Nova Proposta'}
+              </Button>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              {latestDraft && (
-                <div className="mb-6 p-5 border border-brand-light/20 bg-brand-surface/50 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md relative overflow-hidden group border-l-4 border-l-brand-blue">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-blue/20 text-brand-light uppercase tracking-wider border border-brand-blue/30">
-                        <Clock className="w-3 h-3 mr-1" /> Rascunho em Andamento
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        Última alteração: {formatDate(latestDraft.updated_at || latestDraft.created_at)}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-brand-dark group-hover:text-brand-light transition-colors">
-                      {latestDraft.title || 'Nova Proposta Solar'}
-                    </h3>
-                    
-                    {(() => {
-                      const { stepName, percentage } = getDraftProgress(latestDraft);
-                      return (
-                        <div className="space-y-1.5 max-w-md">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-400">Progresso: <strong className="text-brand-light">{stepName}</strong></span>
-                            <span className="font-semibold text-brand-light">{percentage}%</span>
-                          </div>
-                          <div className="w-full bg-brand-border h-1.5 rounded-full overflow-hidden">
-                            <div className="bg-brand-light h-1.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
-                          </div>
+            <CardContent className="flex-1 flex flex-col gap-5">
+              {activeProposal && (() => {
+                const { stepName, percentage, stepIndex, remaining } = getProposalProgress(activeProposal);
+                return (
+                  <div className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5 shadow-md">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                      <div className="min-w-0 flex-1 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {getStatusBadge(activeProposal.status)}
+                          <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-slate-950/20 px-2.5 py-1 text-[11px] text-slate-400">
+                            <Clock className="h-3 w-3" /> Última alteração: {formatDate(activeProposal.updated_at || activeProposal.created_at)}
+                          </span>
                         </div>
-                      );
-                    })()}
+                        <div>
+                          <h3 className="text-lg font-bold text-white">{activeProposal.title || 'Nova Proposta'}</h3>
+                          <p className="mt-1 text-xs text-slate-400">Código: {activeProposal.code || 'Será gerado ao salvar'} · Valor: {formatMoney(activeProposal.final_price)}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="text-slate-400">Etapa atual: <strong className="text-brand-blue">{stepName}</strong></span>
+                            <span className="font-semibold text-brand-blue">{percentage}%</span>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-brand-border">
+                            <div className="h-1.5 rounded-full bg-brand-blue transition-all duration-500" style={{ width: `${percentage}%` }} />
+                          </div>
+                          {remaining.length > 0 && (
+                            <p className="text-[11px] text-slate-500">Faltam: {remaining.join(', ')}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex w-full items-center gap-2 xl:w-auto">
+                        <Button 
+                          onClick={() => navigate(`/propostas/${activeProposal.id}/editar?step=${stepIndex}`)}
+                          className="flex-1 gap-2 bg-brand-blue hover:bg-brand-blue-hover text-white xl:flex-none"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                          Continuar Proposta
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-brand-border hover:border-red-500/20"
+                          title="Excluir proposta"
+                          onClick={() => triggerDeleteProposal(activeProposal.id, activeProposal.title)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2 w-full md:w-auto shrink-0 mt-2 md:mt-0">
-                    <Button 
-                      onClick={() => {
-                        const { stepIndex } = getDraftProgress(latestDraft);
-                        navigate(`/propostas/${latestDraft.id}/editar?step=${stepIndex}`);
-                      }}
-                      className="flex-1 md:flex-none gap-2 bg-brand-blue hover:bg-brand-blue-hover text-white shadow-lg shadow-brand-blue/20"
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                      Continuar Rascunho
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-brand-border hover:border-red-500/20"
-                      title="Excluir Rascunho"
-                      onClick={() => triggerDeleteProposal(latestDraft.id, latestDraft.title)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {proposals.length === 0 ? (
-              <div className="bg-gray-50 border border-brand-border rounded-lg p-8 flex flex-col items-center justify-center flex-1 text-center min-h-[300px]">
-                <FileText className="w-12 h-12 text-slate-500 mb-4" />
-                <h3 className="text-lg font-medium text-brand-dark mb-2">Nenhuma proposta gerada</h3>
-                <p className="text-sm text-slate-500 max-w-sm mb-6">
-                  Este cliente ainda não possui nenhuma proposta comercial vinculada ao seu cadastro.
-                </p>
-                <Button onClick={() => navigate(`/propostas/nova?clienteId=${client.id}`)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Gerar Primeira Proposta
-                </Button>
-              </div>
-              ) : (
-                <>
-                  {otherProposals.length > 0 ? (
-                    <div className="flex-1 overflow-auto max-h-[400px]">
-                      <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-brand-gray text-xs font-medium text-slate-500 uppercase tracking-wider">
-                          <tr>
-                            <th className="px-4 py-3 border-b border-brand-border">Proposta</th>
-                            <th className="px-4 py-3 border-b border-brand-border">Valor</th>
-                            <th className="px-4 py-3 border-b border-brand-border">Status</th>
-                            <th className="px-4 py-3 border-b border-brand-border">Último Evento</th>
-                            <th className="px-4 py-3 border-b border-brand-border text-right">Ação</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-brand-border">
-                          {otherProposals.map(prop => (
-                            <tr key={prop.id} className="hover:bg-brand-surface transition-colors">
-                              <td className="px-4 py-3">
-                                <p className="text-sm font-medium text-brand-dark">{prop.title || 'Sistema Solar'}</p>
-                                <p className="text-xs text-slate-500">{formatDate(prop.created_at)} {prop.code && `- ${prop.code}`}</p>
-                              </td>
-                              <td className="px-4 py-3">
-                                <p className="text-sm text-brand-dark font-medium">{formatMoney(prop.final_price)}</p>
-                              </td>
-                              <td className="px-4 py-3">
-                                {getStatusBadge(prop.status)}
-                              </td>
-                              <td className="px-4 py-3">
-                                {prop.proposal_events && prop.proposal_events.length > 0 ? (
-                                  <div>
-                                    <p className="text-xs text-brand-dark">{prop.proposal_events.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].description || prop.proposal_events[0].event_type}</p>
-                                    <p className="text-[10px] text-slate-500">{formatDate(prop.proposal_events.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at)}</p>
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-slate-500">-</p>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-slate-500 hover:text-white hover:bg-gray-100"
-                                    title="Visualizar Proposta"
-                                    onClick={() => navigate(`/propostas/${prop.id}`)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-slate-500 hover:text-brand-light hover:bg-brand-blue/10"
-                                    title="Editar Proposta"
-                                    onClick={() => navigate(`/propostas/${prop.id}/editar`)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
-                                    title="Excluir Proposta"
-                                    onClick={() => triggerDeleteProposal(prop.id, prop.title)}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
+                <div className="bg-gray-50 border border-brand-border rounded-lg p-8 flex flex-col items-center justify-center flex-1 text-center min-h-[300px]">
+                  <FileText className="w-12 h-12 text-slate-500 mb-4" />
+                  <h3 className="text-lg font-medium text-brand-dark mb-2">Nenhuma proposta gerada</h3>
+                  <p className="text-sm text-slate-500 max-w-sm mb-6">
+                    Este cliente ainda não possui nenhuma proposta comercial vinculada ao seu cadastro.
+                  </p>
+                  <Button onClick={openActiveProposal} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Gerar Primeira Proposta
+                  </Button>
+                </div>
+              ) : closedOrSentProposals.length > 0 ? (
+                <div className="overflow-auto rounded-xl border border-brand-border">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-brand-gray text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3 border-b border-brand-border">Proposta</th>
+                        <th className="px-4 py-3 border-b border-brand-border">Valor</th>
+                        <th className="px-4 py-3 border-b border-brand-border">Status</th>
+                        <th className="px-4 py-3 border-b border-brand-border">Último Evento</th>
+                        <th className="px-4 py-3 border-b border-brand-border text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-brand-border">
+                      {closedOrSentProposals.map(prop => {
+                        const lastEvent = getLastEvent(prop);
+                        return (
+                          <tr key={prop.id} className="hover:bg-brand-surface transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-medium text-brand-dark">{prop.title || 'Sistema Solar'}</p>
+                              <p className="text-xs text-slate-500">{formatDate(prop.created_at)} {prop.code && `- ${prop.code}`}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm text-brand-dark font-medium">{formatMoney(prop.final_price)}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              {getStatusBadge(prop.status)}
+                            </td>
+                            <td className="px-4 py-3">
+                              {lastEvent ? (
+                                <div>
+                                  <p className="text-xs text-brand-dark">{lastEvent.description || lastEvent.event_type}</p>
+                                  <p className="text-[10px] text-slate-500">{formatDate(lastEvent.created_at)}</p>
                                 </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="mt-4 flex justify-center">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => navigate(`/propostas/nova?clienteId=${client.id}`)}
-                        className="gap-2 text-slate-400 border-dashed hover:border-solid border-brand-border hover:text-brand-dark"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Iniciar Outra Proposta do Zero
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-
+                              ) : (
+                                <p className="text-xs text-slate-500">-</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-500 hover:text-white hover:bg-gray-100"
+                                  title="Visualizar Proposta"
+                                  onClick={() => navigate(`/propostas/${prop.id}`)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-500 hover:text-brand-light hover:bg-brand-blue/10"
+                                  title="Editar Proposta"
+                                  onClick={() => navigate(`/propostas/${prop.id}/editar`)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                                  title="Excluir Proposta"
+                                  onClick={() => triggerDeleteProposal(prop.id, prop.title)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeProposal ? (
+                <p className="text-center text-sm text-slate-500">Nenhuma proposta finalizada ou enviada ainda.</p>
+              ) : null}
             </CardContent>
           </Card>
           
