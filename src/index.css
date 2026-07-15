@@ -46,6 +46,73 @@ input[type="file"]::file-selector-button {
   --color-gray-300: #386A9E;
 }
 
+/* Utilitários para listas grandes: a tela mostra cerca de 3 itens e o restante fica rolável. */
+.scroll-after-3-cards,
+.scroll-after-3-table,
+.scroll-after-3-compact,
+.scroll-after-3-timeline,
+.scroll-after-3-grid {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #386A9E rgba(14, 35, 55, 0.55);
+}
+
+.scroll-after-3-cards {
+  max-height: 42rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.scroll-after-3-table {
+  max-height: 17rem;
+  overflow: auto;
+}
+
+.scroll-after-3-compact {
+  max-height: 11rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.scroll-after-3-timeline {
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.scroll-after-3-grid {
+  max-height: 17.5rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.scroll-after-3-cards::-webkit-scrollbar,
+.scroll-after-3-table::-webkit-scrollbar,
+.scroll-after-3-compact::-webkit-scrollbar,
+.scroll-after-3-timeline::-webkit-scrollbar,
+.scroll-after-3-grid::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-after-3-cards::-webkit-scrollbar-track,
+.scroll-after-3-table::-webkit-scrollbar-track,
+.scroll-after-3-compact::-webkit-scrollbar-track,
+.scroll-after-3-timeline::-webkit-scrollbar-track,
+.scroll-after-3-grid::-webkit-scrollbar-track {
+  background: rgba(14, 35, 55, 0.55);
+  border-radius: 999px;
+}
+
+.scroll-after-3-cards::-webkit-scrollbar-thumb,
+.scroll-after-3-table::-webkit-scrollbar-thumb,
+.scroll-after-3-compact::-webkit-scrollbar-thumb,
+.scroll-after-3-timeline::-webkit-scrollbar-thumb,
+.scroll-after-3-grid::-webkit-scrollbar-thumb {
+  background: #386A9E;
+  border-radius: 999px;
+}
+
 /* Menu de botão direito do editor de planimetria. O componente usa classes Tailwind
    utilitárias, então esta regra garante contraste sem alterar a lógica do editor. */
 div.fixed.z-50.w-60.overflow-hidden.rounded-xl.border.border-brand-border.bg-white.shadow-xl {
