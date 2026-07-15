@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Eye, Edit } from 'lucide-react';
+import { Eye, Edit } from 'lucide-react';
+import { ContinueProposalButton } from '../components/proposals/ContinueProposalButton';
 
 const PENDING_PROPOSAL_STATUSES = ['draft', 'pending'];
 
@@ -178,15 +179,7 @@ export function Dashboard() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {pending ? (
-                          <Link 
-                            to={`/propostas/${prop.id}/editar`} 
-                            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-brand-blue px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-blue-hover"
-                            title="Continuar proposta"
-                            aria-label="Continuar proposta"
-                          >
-                            <ArrowRight className="w-4 h-4" />
-                            Continuar
-                          </Link>
+                          <ContinueProposalButton to={`/propostas/${prop.id}/editar`} />
                         ) : (
                           <>
                             <Link 
