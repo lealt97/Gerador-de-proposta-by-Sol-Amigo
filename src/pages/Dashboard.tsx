@@ -9,10 +9,10 @@ import { Eye, Edit } from 'lucide-react';
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-500 border-gray-200',
+    draft: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
     pending: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
-    sent: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
-    viewed: 'bg-brand-yellow/10 text-amber-600 border-brand-yellow/20',
+    sent: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    viewed: 'bg-brand-blue/10 text-brand-blue border-brand-blue/20',
     approved: 'bg-brand-green/20 text-emerald-700 border-brand-green/30',
     accepted: 'bg-brand-green/20 text-emerald-700 border-brand-green/30',
     rejected: 'bg-red-50 text-red-600 border-red-100',
@@ -22,8 +22,8 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`px-2 py-0.5 text-[10px] border rounded-full ${styles[status]}`}>
       {
-      status === 'draft' ? 'Rascunho' :
-      status === 'pending' || status === 'sent' ? 'Pendente' :
+      status === 'draft' || status === 'pending' ? 'Pendente' :
+      status === 'sent' ? 'Enviada' :
       status === 'viewed' ? 'Visualizada' :
       status === 'approved' || status === 'accepted' ? 'Aprovada' :
       status === 'rejected' ? 'Recusada' :
@@ -89,7 +89,7 @@ export function Dashboard() {
             lucroAcumulado: lucroTotal
           });
           
-          setPropostasRecentes(proposals.slice(0, 5));
+          setPropostasRecentes(proposals.slice(0, 10));
         }
       } catch (err) {
         console.error('Error loading dashboard data:', err);
@@ -141,9 +141,9 @@ export function Dashboard() {
             Ver todas
           </Link>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scroll-after-3-table">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-brand-gray text-slate-500 text-[10px] uppercase tracking-widest">
+            <thead className="bg-brand-gray text-slate-500 text-[10px] uppercase tracking-widest sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium">Data</th>
