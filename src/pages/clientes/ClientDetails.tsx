@@ -321,57 +321,59 @@ export function ClientDetails() {
                     <h3 className="text-sm font-semibold text-brand-dark">Propostas em preenchimento</h3>
                     <p className="text-xs text-slate-500">Estas propostas ainda não foram concluídas. Use apenas continuar ou excluir.</p>
                   </div>
-                  {openProposals.map((proposal) => {
-                    const { stepName, percentage, stepIndex, remaining } = getProposalProgress(proposal);
-                    return (
-                      <div key={proposal.id} className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5 shadow-md">
-                        <div className="flex flex-col gap-4">
-                          <div className="min-w-0 flex-1 space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {getStatusBadge(proposal.status)}
-                              <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-slate-950/20 px-2.5 py-1 text-[11px] text-slate-400">
-                                <Clock className="h-3 w-3" /> Última alteração: {formatDate(proposal.updated_at || proposal.created_at)}
-                              </span>
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-white">{proposal.title || 'Nova Proposta'}</h3>
-                              <p className="mt-1 text-xs text-slate-400">Código: {proposal.code || 'Será gerado ao salvar'} · Valor: {formatMoney(proposal.final_price)}</p>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                <span className="text-slate-400">Etapa atual: <strong className="text-brand-blue">{stepName}</strong></span>
-                                <span className="font-semibold text-brand-blue">{percentage}%</span>
+                  <div className="space-y-3 scroll-after-3-cards">
+                    {openProposals.map((proposal) => {
+                      const { stepName, percentage, stepIndex, remaining } = getProposalProgress(proposal);
+                      return (
+                        <div key={proposal.id} className="rounded-2xl border border-brand-blue/30 bg-brand-blue/10 p-5 shadow-md">
+                          <div className="flex flex-col gap-4">
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {getStatusBadge(proposal.status)}
+                                <span className="inline-flex items-center gap-1 rounded-full border border-brand-border bg-slate-950/20 px-2.5 py-1 text-[11px] text-slate-400">
+                                  <Clock className="h-3 w-3" /> Última alteração: {formatDate(proposal.updated_at || proposal.created_at)}
+                                </span>
                               </div>
-                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-brand-border">
-                                <div className="h-1.5 rounded-full bg-brand-blue transition-all duration-500" style={{ width: `${percentage}%` }} />
+                              <div>
+                                <h3 className="text-lg font-bold text-white">{proposal.title || 'Nova Proposta'}</h3>
+                                <p className="mt-1 text-xs text-slate-400">Código: {proposal.code || 'Será gerado ao salvar'} · Valor: {formatMoney(proposal.final_price)}</p>
                               </div>
-                              {remaining.length > 0 && (
-                                <p className="text-[11px] text-slate-500">Faltam: {remaining.join(', ')}</p>
-                              )}
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                  <span className="text-slate-400">Etapa atual: <strong className="text-brand-blue">{stepName}</strong></span>
+                                  <span className="font-semibold text-brand-blue">{percentage}%</span>
+                                </div>
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-brand-border">
+                                  <div className="h-1.5 rounded-full bg-brand-blue transition-all duration-500" style={{ width: `${percentage}%` }} />
+                                </div>
+                                {remaining.length > 0 && (
+                                  <p className="text-[11px] text-slate-500">Faltam: {remaining.join(', ')}</p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex w-full items-center gap-2">
-                            <Button 
-                              onClick={() => navigate(`/propostas/${proposal.id}/editar?step=${stepIndex}`)}
-                              className="flex-1 gap-2 bg-brand-blue hover:bg-brand-blue-hover text-white"
-                            >
-                              <ArrowRight className="w-4 h-4" />
-                              Continuar Proposta
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-10 w-10 text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-brand-border hover:border-red-500/20"
-                              title="Excluir proposta"
-                              onClick={() => triggerDeleteProposal(proposal.id, proposal.title)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex w-full items-center gap-2">
+                              <Button 
+                                onClick={() => navigate(`/propostas/${proposal.id}/editar?step=${stepIndex}`)}
+                                className="flex-1 gap-2 bg-brand-blue hover:bg-brand-blue-hover text-white"
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                                Continuar Proposta
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-brand-border hover:border-red-500/20"
+                                title="Excluir proposta"
+                                onClick={() => triggerDeleteProposal(proposal.id, proposal.title)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -393,7 +395,7 @@ export function ClientDetails() {
                     <h3 className="text-sm font-semibold text-brand-dark">Propostas concluídas ou enviadas</h3>
                     <p className="text-xs text-slate-500">Aqui entram propostas que já podem ser visualizadas, editadas ou acompanhadas.</p>
                   </div>
-                  <div className="overflow-auto rounded-xl border border-brand-border">
+                  <div className="overflow-auto rounded-xl border border-brand-border scroll-after-3-table">
                     <table className="w-full text-left border-collapse">
                       <thead className="sticky top-0 bg-brand-gray text-xs font-medium text-slate-500 uppercase tracking-wider">
                         <tr>
