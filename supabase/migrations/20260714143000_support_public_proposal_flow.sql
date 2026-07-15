@@ -36,10 +36,14 @@ create index if not exists proposals_public_viewed_at_idx
 create index if not exists proposals_selected_solar_kit_id_idx
   on public.proposals(selected_solar_kit_id);
 
+-- Remove versões antigas das RPCs para permitir mudança de tipo de retorno.
+drop function if exists public.get_public_proposal(text);
+drop function if exists public.update_public_proposal_status(text, text, text, text, text);
+
 -- =========================================================
 -- RPC: buscar proposta pública por token
 -- =========================================================
-create or replace function public.get_public_proposal(p_token text)
+create function public.get_public_proposal(p_token text)
 returns jsonb
 language plpgsql
 security definer
@@ -129,7 +133,7 @@ $$;
 -- =========================================================
 -- RPC: aceitar ou recusar proposta pública por token
 -- =========================================================
-create or replace function public.update_public_proposal_status(
+create function public.update_public_proposal_status(
   p_token text,
   p_status text,
   p_reason text default null,
