@@ -13,7 +13,6 @@ const formatNumber = (val: any) => {
 };
 
 const profileSelect = 'company_name, logo_url, seller_name, seller_phone, seller_email, seller_signature_url, website, company_email, default_validity_days, default_margin_percentage';
-const OPEN_PROPOSAL_STATUSES = ['draft', 'pending'];
 
 const getAdditionalCostsTotal = (proposal: Partial<ProposalFormValues>) => {
   return (proposal.additional_costs || []).reduce((sum, cost) => {
@@ -63,27 +62,6 @@ const generateProposalCode = async (userId: string, attempt = 0) => {
 
 const isDuplicateCodeError = (error: any) => {
   return error?.code === '23505' || String(error?.message || '').toLowerCase().includes('duplicate');
-};
-
-const findOpenProposalForClient = async (userId: string, clientId: string) => {
-  const { data, error } = await supabase
-    .from('proposals')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('client_id', clientId)
-    .in('status', OPEN_PROPOSAL_STATUSES)
-    .is('pdf_url', null)
-    .is('sent_whatsapp_at', null)
-    .is('public_viewed_at', null)
-    .is('accepted_at', null)
-    .is('rejected_at', null)
-    .order('updated_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as { id: string } | null;
 };
 
 export const proposalService = {
@@ -166,35 +144,6 @@ export const proposalService = {
       markup_percentage: pricing.markup_percentage,
     };
 
-    if (!isDuplicate && proposal.client_id) {
-      const openProposal = await findOpenProposalForClient(userId, proposal.client_id);
-
-      if (openProposal) {
-        const { data: updatedData, error: updateError } = await supabase
-          .from('proposals')
-          .update(formattedData)
-          .eq('id', openProposal.id)
-          .select()
-          .single();
-
-        if (updateError) throw updateError;
-
-        await this.upsertSolarCalculation(openProposal.id, proposal, pricing.final_price);
-
-        if (proposal.loads) {
-          await this.upsertLoads(openProposal.id, proposal.loads);
-        }
-
-        await proposalEventService.logEvent(
-          openProposal.id,
-          'updated',
-          'Proposta em andamento atualizada'
-        );
-
-        return updatedData as Proposal;
-      }
-    }
-
     let data: any = null;
     let lastError: any = null;
 
@@ -210,23 +159,6 @@ export const proposalService = {
         data = insertedData;
         lastError = null;
         break;
-      }
-
-      if (!isDuplicate && proposal.client_id && isDuplicateCodeError(error)) {
-        const openProposal = await findOpenProposalForClient(userId, proposal.client_id);
-        if (openProposal) {
-          const { data: updatedData, error: updateError } = await supabase
-            .from('proposals')
-            .update(formattedData)
-            .eq('id', openProposal.id)
-            .select()
-            .single();
-
-          if (updateError) throw updateError;
-          data = updatedData;
-          lastError = null;
-          break;
-        }
       }
 
       lastError = error;
