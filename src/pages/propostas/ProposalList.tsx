@@ -99,8 +99,7 @@ export function ProposalList() {
       const { id, created_at, updated_at, code, client, ...rest } = proposal;
       const duplicated = await proposalService.createProposal(
         { ...rest, title: `${proposal.title || 'Proposta'} (Cópia)` },
-        user.id,
-        true
+        user.id
       );
       navigate(`/propostas/${duplicated.id}/editar`);
     } catch (err: any) {
@@ -183,9 +182,9 @@ export function ProposalList() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scroll-after-3-table">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-brand-gray text-slate-500 text-[10px] uppercase tracking-widest">
+            <thead className="bg-brand-gray text-slate-500 text-[10px] uppercase tracking-widest sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 font-medium">Proposta</th>
                 <th className="px-4 py-3 font-medium">Cliente</th>
