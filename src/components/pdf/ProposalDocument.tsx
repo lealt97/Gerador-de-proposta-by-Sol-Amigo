@@ -3,6 +3,7 @@ import { Document, Page, StyleSheet, Image, Text, View } from '@react-pdf/render
 import { Proposal } from '../../types/proposal';
 import { PdfTheme } from '../../types/pdfModels';
 import { CoverPage } from './sections/CoverPage';
+import { DynamicCoverOverlay } from './sections/DynamicCoverOverlay';
 import { IntroLetterSection } from './sections/IntroLetterSection';
 import { ExecutiveSummary } from './sections/ExecutiveSummary';
 import { EnergyDiagnosisSection } from './sections/EnergyDiagnosisSection';
@@ -84,7 +85,10 @@ export const ProposalDocument: React.FC<ProposalDocumentProps> = ({ proposal, co
       <PdfThemeProvider theme={pdfTheme}>
         <Page size="A4" style={styles.page}>
           {coverImage ? (
-            <Image src={coverImage} style={styles.coverImage} />
+            <>
+              <Image src={coverImage} style={styles.coverImage} />
+              <DynamicCoverOverlay proposal={proposal} />
+            </>
           ) : (
             <CoverPage proposal={proposal} />
           )}
