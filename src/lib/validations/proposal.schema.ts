@@ -20,6 +20,7 @@ export const proposalSchema = z.object({
   })).optional(),
   
   // Projeto Solar
+  system_type: z.enum(['on_grid', 'hybrid', 'off_grid']).optional(),
   cep: z.string().optional().or(z.literal('')),
   hsp: z.union([z.string(), z.number()]).optional(),
   panel_power_w: z.union([z.string(), z.number()]).optional(),
@@ -27,6 +28,11 @@ export const proposalSchema = z.object({
   generation_target_percent: z.union([z.string(), z.number()]).optional(),
   oversizing: z.union([z.string(), z.number()]).optional(),
   energy_tariff: z.union([z.string(), z.number()]).optional(),
+  battery_capacity_kwh: z.union([z.string(), z.number()]).optional(),
+  usable_battery_capacity_kwh: z.union([z.string(), z.number()]).optional(),
+  backup_power_kw: z.union([z.string(), z.number()]).optional(),
+  autonomy_hours: z.union([z.string(), z.number()]).optional(),
+  essential_loads_description: z.string().optional().or(z.literal('')),
 
   // Kit solar escolhido
   selected_solar_kit_id: z.string().optional().nullable().or(z.literal('')),
