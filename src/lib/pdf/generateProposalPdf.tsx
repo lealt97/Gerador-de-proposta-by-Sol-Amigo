@@ -5,7 +5,6 @@ import { Proposal } from '../../types/proposal';
 import { PdfUserModel } from '../../types/pdfModels';
 import { supabase } from '../supabase/client';
 import { pdfModelService } from '../../services/pdfModelService';
-import { createOwnerProposalPdfUrl } from './proposalPdfStorage';
 import { generateSvgCoverImage } from './utils/svgToImage';
 
 async function resolvePdfModel(
@@ -70,6 +69,11 @@ async function enrichProposalForPdf(proposal: Proposal): Promise<Proposal> {
   return enrichedProposal as Proposal;
 }
 
+function buildSecurePdfUrl(publicToken: string): string {
+  const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+  return `${supabaseUrl}/functions/v1/public-proposal-pdf?token=${encodeURIComponent(publicToken)}`;
+}
+
 export async function generateAndUploadPdf(
   proposal: Proposal,
   selectedModelId?: string | null
@@ -113,14 +117,16 @@ export async function generateAndUploadPdf(
       return null;
     }
 
-    const signedUrl = await createOwnerProposalPdfUrl(filePath);
-    if (!signedUrl) return null;
+    const publicToken = enrichedProposal.public_token
+      || crypto.randomUUID().replace(/-/g, '');
+    const securePdfUrl = buildSecurePdfUrl(publicToken);
 
     const { error: updateError } = await supabase
       .from('proposals')
       .update({
+        public_token: publicToken,
         pdf_storage_path: filePath,
-        pdf_url: signedUrl,
+        pdf_url: securePdfUrl,
       })
       .eq('id', enrichedProposal.id);
 
@@ -129,7 +135,7 @@ export async function generateAndUploadPdf(
       return null;
     }
 
-    return signedUrl;
+    return securePdfUrl;
   } catch (error) {
     console.error('Error generating PDF:', error);
     return null;
