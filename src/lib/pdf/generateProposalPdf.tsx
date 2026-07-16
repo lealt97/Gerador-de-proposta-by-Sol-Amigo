@@ -26,19 +26,63 @@ async function resolvePdfModel(
   return models.find((model) => model.is_default) || models[0] || null;
 }
 
+async function enrichProposalForPdf(proposal: Proposal): Promise<Proposal> {
+  const enrichedProposal: any = { ...proposal };
+
+  try {
+    if (proposal.client_id) {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('name, document, email, phone, city, state')
+        .eq('id', proposal.client_id)
+        .maybeSingle();
+
+      if (client) {
+        enrichedProposal.client = {
+          ...(proposal.client || {}),
+          ...client,
+        };
+      }
+    }
+  } catch (clientError) {
+    console.warn('Could not enrich PDF proposal client data', clientError);
+  }
+
+  try {
+    const currentPower = Number(enrichedProposal.solar?.installed_power_kwp || 0);
+    if (!currentPower) {
+      const { data: solarRows } = await supabase
+        .from('solar_system_calculations')
+        .select('*')
+        .eq('proposal_id', proposal.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (solarRows?.[0]) {
+        enrichedProposal.solar = solarRows[0];
+      }
+    }
+  } catch (solarError) {
+    console.warn('Could not enrich PDF proposal solar data', solarError);
+  }
+
+  return enrichedProposal as Proposal;
+}
+
 export async function generateAndUploadPdf(
   proposal: Proposal,
   selectedModelId?: string | null
 ): Promise<string | null> {
   try {
+    const enrichedProposal = await enrichProposalForPdf(proposal);
     let coverImage: string | null = null;
     let selectedModel: PdfUserModel | null = null;
     
     // Attempt to load the selected template for this generation, falling back to the user's default template.
     try {
-      selectedModel = await resolvePdfModel(proposal, selectedModelId);
+      selectedModel = await resolvePdfModel(enrichedProposal, selectedModelId);
       if (selectedModel) {
-        coverImage = await generateSvgCoverImage(selectedModel, proposal);
+        coverImage = await generateSvgCoverImage(selectedModel, enrichedProposal);
       }
     } catch (templateError) {
       console.warn('Could not load custom cover template, falling back to default', templateError);
@@ -47,7 +91,7 @@ export async function generateAndUploadPdf(
     // Generate PDF blob. The internal pages inherit the same theme used by the selected/default cover model.
     const asPdf = pdf(
       <ProposalDocument
-        proposal={proposal}
+        proposal={enrichedProposal}
         coverImage={coverImage}
         pdfTheme={selectedModel?.theme}
       />
@@ -56,8 +100,8 @@ export async function generateAndUploadPdf(
     
     // Create unique filename
     const timestamp = new Date().getTime();
-    const fileName = `proposta-${proposal.code || proposal.id.substring(0, 8)}-${timestamp}.pdf`;
-    const filePath = `${proposal.user_id}/${fileName}`;
+    const fileName = `proposta-${enrichedProposal.code || enrichedProposal.id.substring(0, 8)}-${timestamp}.pdf`;
+    const filePath = `${enrichedProposal.user_id}/${fileName}`;
     
     // Check if bucket exists, if not, it will fail but we assume 'proposals' bucket exists
     const { error: uploadError } = await supabase
@@ -84,7 +128,7 @@ export async function generateAndUploadPdf(
       const { error: updateError } = await supabase
         .from('proposals')
         .update({ pdf_url: urlData.publicUrl })
-        .eq('id', proposal.id);
+        .eq('id', enrichedProposal.id);
         
       if (updateError) {
         console.error('Error updating proposal with PDF URL:', updateError);
