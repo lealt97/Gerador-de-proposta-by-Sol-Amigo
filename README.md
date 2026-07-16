@@ -131,7 +131,7 @@ src/
 supabase/
   functions/           Edge Functions
   migrations/          evolução do banco e políticas
- tests/                 testes automatizados
+tests/                 testes automatizados
 ```
 
 ## Segurança
@@ -148,6 +148,7 @@ Consulte também:
 
 - `docs/SECURITY_PHASE_1.md`
 - `docs/INTEGRITY_PHASE_2.md`
+- `docs/QUALITY_PHASE_3.md`
 
 ## Estado do projeto
 
