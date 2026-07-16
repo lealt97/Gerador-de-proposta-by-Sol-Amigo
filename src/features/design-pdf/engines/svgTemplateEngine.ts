@@ -21,7 +21,7 @@ export function buildSvgTemplate(input: BuildSvgTemplateInput) {
   const doc = parser.parseFromString(input.svgSource, 'image/svg+xml');
 
   applyTheme(doc, input.theme);
-  applyDynamicTexts(doc, input.texts || {});
+  applyDynamicTexts(doc, input.texts || {}, input.theme.current);
   applyCoverPhoto(doc, input.coverImageUrl, input.coverImageTransform);
   applyLogo(doc, input.logoUrl, input.logoTransform);
 
