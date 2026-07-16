@@ -75,10 +75,13 @@ npm run dev             # servidor local
 npm run typecheck       # verificação TypeScript da aplicação
 npm run typecheck:core  # verificação estrita dos cálculos e testes
 npm run test            # testes automatizados do núcleo financeiro e solar
-npm run build           # build de produção
-npm run check           # TypeScript + testes + build
+npm run build           # TypeScript + testes + build de produção
+npm run build:app       # somente o build Vite, sem as validações
+npm run check           # alias do build protegido
 npm run preview         # visualização do build
 ```
+
+O comando `npm run build` é propositalmente protegido. O Railway e outros ambientes que usam o script padrão de build só publicam a aplicação depois que as verificações TypeScript e os testes terminam com sucesso.
 
 ## Qualidade e integração contínua
 
