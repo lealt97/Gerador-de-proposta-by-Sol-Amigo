@@ -1,16 +1,14 @@
 import { Card } from '../components/ui/Card';
-import { useEffect, useState } from 'react';
+import { DeleteConfirmModal } from '../components/ui/DeleteConfirmModal';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '../lib/supabase/client';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
-import { Eye, Edit } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
 import { ContinueProposalButton } from '../components/proposals/ContinueProposalButton';
-
-const PENDING_PROPOSAL_STATUSES = ['draft', 'pending'];
-
-function isProposalPending(proposal: any) {
-  return PENDING_PROPOSAL_STATUSES.includes(proposal.status);
-}
+import { isProposalPending } from '../lib/proposals/status';
+import { proposalService } from '../services/proposalService';
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -47,64 +45,96 @@ export function Dashboard() {
     lucroAcumulado: 0
   });
   const [propostasRecentes, setPropostasRecentes] = useState<any[]>([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState<{
+    id: string;
+    title: string | null;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const { count: clientsCount } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+
+      const { data: proposals } = await supabase
+        .from('proposals')
+        .select('*, client:clients(name), solar:solar_system_calculations(installed_power_kwp)')
+        .order('created_at', { ascending: false });
+
+      if (proposals) {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        let propMes = 0;
+        let valorVendido = 0;
+        let lucroTotal = 0;
+
+        proposals.forEach((proposal) => {
+          const createdAt = new Date(proposal.created_at);
+          if (
+            createdAt.getMonth() === currentMonth
+            && createdAt.getFullYear() === currentYear
+          ) {
+            propMes++;
+          }
+
+          if (proposal.status === 'approved' || proposal.status === 'accepted') {
+            if (createdAt.getFullYear() === currentYear) {
+              valorVendido += proposal.final_price || 0;
+            }
+            lucroTotal += proposal.estimated_profit || 0;
+          }
+        });
+
+        setKpiData({
+          clientesAtivos: clientsCount || 0,
+          propostasMes: propMes,
+          propostasTotal: proposals.length,
+          valorVendidoAno: valorVendido,
+          lucroAcumulado: lucroTotal
+        });
+
+        setPropostasRecentes(proposals.slice(0, 10));
+      }
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        // Load Clients count
-        const { count: clientsCount } = await supabase
-          .from('clients')
-          .select('*', { count: 'exact', head: true });
-        
-        // Load Proposals
-        const { data: proposals } = await supabase
-          .from('proposals')
-          .select('*, client:clients(name), solar:solar_system_calculations(installed_power_kwp)')
-          .order('created_at', { ascending: false });
-          
-        if (proposals) {
-          const now = new Date();
-          const currentMonth = now.getMonth();
-          const currentYear = now.getFullYear();
-          
-          let propMes = 0;
-          let valorVendido = 0;
-          let lucroTotal = 0;
-          
-          proposals.forEach(p => {
-            const d = new Date(p.created_at);
-            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-              propMes++;
-            }
-            
-            // Only consider approved/accepted for sales/profit KPIs
-            if (p.status === 'approved' || p.status === 'accepted') {
-              if (d.getFullYear() === currentYear) {
-                valorVendido += (p.final_price || 0);
-              }
-              lucroTotal += (p.estimated_profit || 0);
-            }
-          });
-          
-          setKpiData({
-            clientesAtivos: clientsCount || 0,
-            propostasMes: propMes,
-            propostasTotal: proposals.length,
-            valorVendidoAno: valorVendido,
-            lucroAcumulado: lucroTotal
-          });
-          
-          setPropostasRecentes(proposals.slice(0, 10));
-        }
-      } catch (err) {
-        console.error('Error loading dashboard data:', err);
-      }
+    void loadData();
+  }, [loadData]);
+
+  const triggerDelete = (proposal: any) => {
+    setProposalToDelete({
+      id: proposal.id,
+      title: proposal.title || proposal.client?.name || null,
+    });
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!proposalToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await proposalService.deleteProposal(proposalToDelete.id);
+      toast.success('Proposta excluída com sucesso!');
+      setDeleteModalOpen(false);
+      setProposalToDelete(null);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir proposta');
+    } finally {
+      setIsDeleting(false);
     }
-    loadData();
-  }, []);
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="p-4">
           <p className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Clientes Ativos</p>
@@ -138,7 +168,6 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Propostas Recentes Table */}
       <Card className="flex flex-col overflow-hidden">
         <div className="p-4 border-b border-brand-border flex justify-between items-center bg-brand-surface">
           <h3 className="text-sm font-medium">Propostas Recentes</h3>
@@ -159,38 +188,54 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody className="text-sm bg-brand-surface">
-              {propostasRecentes.map((prop) => {
-                const pending = isProposalPending(prop);
+              {propostasRecentes.map((proposal) => {
+                const pending = isProposalPending(proposal);
 
                 return (
-                  <tr key={prop.id} className="border-b border-brand-border hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-brand-dark">{prop.client?.name}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{formatDate(prop.created_at)}</td>
+                  <tr key={proposal.id} className="border-b border-brand-border hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-brand-dark">{proposal.client?.name}</td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{formatDate(proposal.created_at)}</td>
                     <td className="px-4 py-3 text-xs text-brand-dark">
                       {(() => {
-                        const solarObj = Array.isArray(prop.solar) ? prop.solar[0] : prop.solar;
-                        return solarObj?.installed_power_kwp ? solarObj.installed_power_kwp.toFixed(1) + ' kWp' : '-';
+                        const solarObj = Array.isArray(proposal.solar) ? proposal.solar[0] : proposal.solar;
+                        return solarObj?.installed_power_kwp
+                          ? `${solarObj.installed_power_kwp.toFixed(1)} kWp`
+                          : '-';
                       })()}
                     </td>
-                    <td className="px-4 py-3 font-mono text-brand-dark">{formatCurrency(prop.final_price || 0)}</td>
+                    <td className="px-4 py-3 font-mono text-brand-dark">{formatCurrency(proposal.final_price || 0)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={prop.status} />
+                      <StatusBadge status={proposal.status} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {pending ? (
-                          <ContinueProposalButton to={`/propostas/${prop.id}/editar`} />
+                          <>
+                            <ContinueProposalButton
+                              to={`/propostas/${proposal.id}/editar`}
+                              className="h-9 min-w-[170px]"
+                            />
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                              title="Excluir"
+                              aria-label="Excluir proposta pendente"
+                              onClick={() => triggerDelete(proposal)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
                         ) : (
                           <>
-                            <Link 
-                              to={`/propostas/${prop.id}`} 
+                            <Link
+                              to={`/propostas/${proposal.id}`}
                               className="inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-500 hover:text-white hover:bg-gray-100 transition-colors"
                               title="Visualizar Proposta"
                             >
                               <Eye className="w-4 h-4" />
                             </Link>
-                            <Link 
-                              to={`/propostas/${prop.id}/editar`} 
+                            <Link
+                              to={`/propostas/${proposal.id}/editar`}
                               className="inline-flex items-center justify-center h-8 w-8 rounded-md text-slate-500 hover:text-brand-light hover:bg-brand-blue/10 transition-colors"
                               title="Editar Proposta"
                             >
@@ -214,6 +259,19 @@ export function Dashboard() {
           </table>
         </div>
       </Card>
+
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          if (isDeleting) return;
+          setDeleteModalOpen(false);
+          setProposalToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Excluir Proposta"
+        description={`Tem certeza que deseja excluir a proposta "${proposalToDelete?.title || 'Sem título'}"? Esta ação é permanente e não poderá ser desfeita.`}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
