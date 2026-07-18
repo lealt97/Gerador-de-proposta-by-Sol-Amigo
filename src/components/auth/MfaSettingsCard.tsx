@@ -425,9 +425,9 @@ export function MfaSettingsCard({ userId, profile, onProfileChange }: MfaSetting
                   if (enabled) openDisableConfirmation();
                   else void startEnrollment();
                 }}
-                className={`relative flex h-6 w-10 items-center rounded-full px-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${enabled ? 'bg-brand-blue' : 'bg-slate-300'}`}
+                className={`w-10 h-6 rounded-full transition-colors relative flex items-center px-1 disabled:cursor-not-allowed disabled:opacity-60 ${enabled ? 'bg-brand-blue' : 'bg-slate-300'}`}
               >
-                <span className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                <div className={`w-4 h-4 rounded-full bg-brand-surface transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
             </div>
           </div>
