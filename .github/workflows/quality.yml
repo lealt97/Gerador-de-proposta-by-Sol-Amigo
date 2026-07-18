@@ -33,4 +33,17 @@ jobs:
         run: npm ci
 
       - name: Executar validações completas
-        run: npm run check
+        run: |
+          set +e
+          npm run check > validation.log 2>&1
+          status=$?
+          cat validation.log
+          exit $status
+
+      - name: Publicar saída das validações
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: account-isolation-validation
+          path: validation.log
+          retention-days: 1
