@@ -75,7 +75,7 @@ A aplicação será aberta por padrão em `http://localhost:3000`.
 npm run dev             # servidor local de desenvolvimento
 npm run typecheck       # auditoria TypeScript completa da aplicação
 npm run typecheck:core  # verificação estrita isolada do núcleo e dos testes
-npm run test            # testes automatizados do núcleo financeiro e solar
+npm run test            # executa todas as suítes automatizadas
 npm run build           # TypeScript completo + testes + build de produção
 npm run build:app       # somente o build Vite, sem as validações
 npm start               # servidor Express do build de produção
@@ -94,7 +94,7 @@ O workflow `.github/workflows/quality.yml` executa automaticamente na branch `ma
 3. testes automatizados;
 4. build de produção.
 
-Os testes atuais cobrem dimensionamento solar, média de consumo, preço e margem, payback e levantamento de cargas.
+Os testes atuais cobrem cálculos solares e financeiros, validação de login, autenticação por senha, recuperação e atualização de senha, decisão do gate MFA, desafio TOTP, elevação para AAL2, criação de fator com nome único, desativação de fatores e tradução dos principais erros de MFA.
 
 ## Railway
 
@@ -141,6 +141,7 @@ src/
   components/          componentes compartilhados
   contexts/            autenticação e contexto global
   features/design-pdf/ editor de modelos de proposta
+  lib/auth/            fluxos testáveis de login, recuperação e MFA
   lib/calculations/    cálculos solares, financeiros e payback
   lib/pdf/             geração e armazenamento de PDF
   pages/               páginas e fluxos da aplicação
