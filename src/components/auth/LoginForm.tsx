@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { loginSchema, LoginFormValues } from '../../lib/validations/auth.schema';
 import { supabase } from '../../lib/supabase/client';
+import { AnimatedLoginLogo } from '../brand/AnimatedLoginLogo';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
@@ -37,12 +38,10 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-2 text-center">
-        <div className="flex justify-center mb-4">
-          <div className="w-12 h-12 bg-brand-blue rounded-xl flex items-center justify-center text-white font-bold text-xl">
-            S
-          </div>
+    <Card className="mx-auto w-full max-w-md overflow-visible">
+      <CardHeader className="space-y-2 pt-7 text-center">
+        <div className="mx-auto mb-3 w-full max-w-[360px] px-2">
+          <AnimatedLoginLogo />
         </div>
         <CardTitle className="text-2xl font-bold tracking-tight">Login</CardTitle>
         <CardDescription>Entre com suas credenciais para acessar a plataforma.</CardDescription>
@@ -50,7 +49,7 @@ export function LoginForm() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md">
+            <div className="rounded-md border border-red-100 bg-red-50 p-3 text-sm text-red-600">
               {error}
             </div>
           )}
