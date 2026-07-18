@@ -32,8 +32,5 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Executar TypeScript completo
-        run: npm run typecheck
-
-      - name: Executar testes e build protegido
+      - name: Executar validações completas
         run: npm run check
