@@ -30,7 +30,7 @@ Este documento acompanha a preparação do produto para lançamento comercial. U
 - [x] Testes dos cálculos solares e financeiros
 - [x] Testes de autenticação e recuperação de senha
 - [x] Testes de ativação, desafio e desativação do MFA
-- [ ] Testes de cadastro, edição e exclusão de clientes
+- [x] Testes de cadastro, edição e exclusão de clientes
 - [ ] Testes de criação, edição, duplicação e exclusão de propostas
 - [ ] Testes de kits solares
 - [ ] Testes de geração e armazenamento de PDF
@@ -38,7 +38,7 @@ Este documento acompanha a preparação do produto para lançamento comercial. U
 - [ ] Testes de isolamento entre contas distintas
 - [ ] Adicionar testes E2E com Playwright
 
-Evidência atual: 20 testes automatizados aprovados no GitHub Actions, incluindo 13 cenários de autenticação, recuperação de senha e MFA, com TypeScript completo e build de produção aprovados.
+Evidência atual: 27 testes automatizados aprovados no GitHub Actions, incluindo cálculos, autenticação, recuperação de senha, MFA e operações de clientes, com TypeScript completo e build de produção aprovados.
 
 ### PDFs e editor visual
 
