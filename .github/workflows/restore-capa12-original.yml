@@ -1,0 +1,40 @@
+name: Restaurar capa A4 12 original
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/capa12-restore/**'
+      - '.github/workflows/restore-capa12-original.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restore-original-cover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Reconstruir e validar o SVG original
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/capa12-restore/part-* > /tmp/capa12.svg.xz.b64
+          base64 --decode /tmp/capa12.svg.xz.b64 > /tmp/capa12.svg.xz
+          xz --decompress --stdout /tmp/capa12.svg.xz > "public/pdf-assets/covers/A4 -12.svg"
+          echo "7566e06773d5a85b85c8d9faa4a0d0653b215cd9de4f2b8a338f77c758e013a0  public/pdf-assets/covers/A4 -12.svg" | sha256sum --check -
+          rm -rf .github/capa12-restore
+          rm -f .github/workflows/restore-capa12-original.yml
+
+      - name: Publicar correção na main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "public/pdf-assets/covers/A4 -12.svg" .github
+          git commit -m "fix: restaurar arte original da capa A4 12"
+          git push
