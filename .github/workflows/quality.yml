@@ -33,4 +33,18 @@ jobs:
         run: npm ci
 
       - name: Executar validações completas
-        run: npm run check
+        id: validation
+        continue-on-error: true
+        run: npm run check > auth-test-audit.log 2>&1
+
+      - name: Salvar relatório da auditoria
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-test-audit
+          path: auth-test-audit.log
+          retention-days: 1
+
+      - name: Falhar quando a validação falhar
+        if: steps.validation.outcome == 'failure'
+        run: exit 1
