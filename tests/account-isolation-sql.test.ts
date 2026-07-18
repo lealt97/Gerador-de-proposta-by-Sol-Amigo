@@ -62,7 +62,10 @@ async function loadSecuritySql() {
   const files: Array<{ name: string; sql: string }> = [];
 
   try {
-    files.push({ name: 'supabase-schema.sql', sql: await readFile('supabase-schema.sql', 'utf8') });
+    files.push({
+      name: 'supabase-schema.sql',
+      sql: await readFile('supabase-schema.sql', 'utf8'),
+    });
   } catch {
     // Some deployments use migrations only.
   }
@@ -139,11 +142,14 @@ test('cálculos, cargas e eventos dependem da propriedade da proposta', async ()
       .join(' ');
 
     assert.match(combined, /exists\s*\(\s*select 1/i);
-    assert.match(combined, /proposals\.user_id\s*=\s*auth\.uid\(\)|p\.user_id\s*=\s*auth\.uid\(\)/i);
+    assert.match(
+      combined,
+      /proposals\.user_id\s*=\s*auth\.uid\(\)|p\.user_id\s*=\s*auth\.uid\(\)/i,
+    );
   }
 });
 
-test('arquivos privados e gravações de identidade visual usam pasta do usuário', async () => {
+test('arquivos e imagens de identidade visual usam a pasta do proprietário', async () => {
   const { policies } = await loadSecuritySql();
 
   for (const bucket of ['proposals', 'pdf-assets', 'logos']) {
@@ -152,19 +158,28 @@ test('arquivos privados e gravações de identidade visual usam pasta do usuári
     const combined = storagePolicies.map((policy) => policy.statement).join(' ');
 
     assert.match(combined, /storage\.foldername\(name\)\)\[1\]\s*=\s*auth\.uid\(\)::text/i);
+    assert.match(combined, /for select/i);
     assert.match(combined, /for insert/i);
     assert.match(combined, /for update/i);
     assert.match(combined, /for delete/i);
   }
 });
 
-test('políticas legadas amplas do bucket de logos não permanecem ativas', async () => {
+test('políticas amplas de escrita e listagem não permanecem ativas', async () => {
   const { policies } = await loadSecuritySql();
   const activeNames = new Set(policies.map((policy) => policy.name));
 
-  assert.equal(activeNames.has('Authenticated upload logos bucket'), false);
-  assert.equal(activeNames.has('Authenticated update logos bucket'), false);
-  assert.equal(activeNames.has('Authenticated delete logos bucket'), false);
+  for (const policyName of [
+    'Authenticated upload logos bucket',
+    'Authenticated update logos bucket',
+    'Authenticated delete logos bucket',
+    'Public read logos',
+    'Public read logos bucket',
+    'Public read pdf-assets',
+    'Public read pdf-assets bucket',
+  ]) {
+    assert.equal(activeNames.has(policyName), false, `${policyName} ainda está ativa`);
+  }
 });
 
 test('link público não restaura acesso anônimo direto à tabela de propostas', async () => {
