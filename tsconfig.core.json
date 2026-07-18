@@ -11,6 +11,7 @@
     "src/lib/auth/**/*.ts",
     "src/lib/calculations/**/*.ts",
     "src/lib/clients/**/*.ts",
+    "src/lib/kits/**/*.ts",
     "src/lib/proposals/**/*.ts",
     "src/lib/validations/auth.schema.ts",
     "src/lib/validations/client.schema.ts",
