@@ -1,26 +1,23 @@
 name: Aplicar capa A4 12 original
 
 on:
-  pull_request:
-    branches:
-      - main
+  issue_comment:
     types:
-      - opened
-      - synchronize
-      - reopened
+      - created
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   apply-original-svg:
-    if: github.actor != 'github-actions[bot]' && github.event.pull_request.head.ref == 'agent/corrigir-capa-a4-12-original'
+    if: github.event.issue.pull_request && github.event.issue.number == 38 && github.event.comment.body == '/apply-capa12-original'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout da branch corretiva
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: agent/corrigir-capa-a4-12-original
           fetch-depth: 0
 
       - name: Restaurar exatamente o SVG enviado
@@ -56,4 +53,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'Corrigir capa A4 12 com o arquivo original'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:agent/corrigir-capa-a4-12-original
