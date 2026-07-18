@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   quality:
-    name: TypeScript, testes e build
+    name: TypeScript completo, testes e build
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -32,5 +32,5 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Executar validações
+      - name: Executar validações completas
         run: npm run check

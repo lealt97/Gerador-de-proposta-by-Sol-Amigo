@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build:app": "vite build",
-    "build": "npm run typecheck:core && npm run test && npm run build:app",
+    "build": "npm run typecheck && npm run test && npm run build:app",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "typecheck": "tsc --noEmit",
