@@ -8,7 +8,11 @@
     "node": ">=20"
   },
   "scripts": {
+    "restore:capa12": "node scripts/restore-capa12-original.mjs",
+    "postinstall": "npm run restore:capa12",
+    "predev": "npm run restore:capa12",
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "prebuild:app": "npm run restore:capa12",
     "build:app": "vite build",
     "build": "npm run typecheck:core && npm run test && npm run build:app",
     "preview": "vite preview",
