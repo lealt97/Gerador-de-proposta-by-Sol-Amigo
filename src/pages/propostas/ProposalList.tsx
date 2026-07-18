@@ -222,10 +222,22 @@ export function ProposalList() {
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {pending ? (
-                            <ContinueProposalButton
-                              to={`/propostas/${proposal.id}/editar`}
-                              className="h-9 min-w-[170px]"
-                            />
+                            <>
+                              <ContinueProposalButton
+                                to={`/propostas/${proposal.id}/editar`}
+                                className="h-9 min-w-[170px]"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                                title="Excluir"
+                                aria-label="Excluir proposta pendente"
+                                onClick={() => triggerDelete(proposal.id, proposal.title)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
                           ) : (
                             <>
                               <Button 
