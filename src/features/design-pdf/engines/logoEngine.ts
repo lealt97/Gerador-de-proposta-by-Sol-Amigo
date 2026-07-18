@@ -1,12 +1,26 @@
 import { TransformConfig } from '../types/pdfDesignTypes';
 import { SVG_NS, setHref } from './svgDom';
 
-function getLogoBasePosition(logoElement: Element) {
+type LogoPlacement = {
+  baseX: number;
+  baseY: number;
+  width: number;
+  height: number;
+  tagName: string;
+  parent: Element;
+  placeholder?: Element;
+};
+
+function getLogoBasePosition(logoElement: Element): Omit<LogoPlacement, 'parent' | 'placeholder'> {
   let baseX = 32;
   let baseY = 32;
 
-  if (logoElement.hasAttribute('x') && logoElement.getAttribute('x')) baseX = Number(logoElement.getAttribute('x'));
-  if (logoElement.hasAttribute('y') && logoElement.getAttribute('y')) baseY = Number(logoElement.getAttribute('y'));
+  if (logoElement.hasAttribute('x') && logoElement.getAttribute('x')) {
+    baseX = Number(logoElement.getAttribute('x'));
+  }
+  if (logoElement.hasAttribute('y') && logoElement.getAttribute('y')) {
+    baseY = Number(logoElement.getAttribute('y'));
+  }
 
   const tagName = logoElement.tagName.toLowerCase();
   if (tagName === 'path') {
@@ -31,43 +45,97 @@ function getLogoBasePosition(logoElement: Element) {
     baseY += Number(translate[2]);
   }
 
-  return { baseX, baseY, tagName };
+  return {
+    baseX,
+    baseY,
+    width: 140,
+    height: 64,
+    tagName,
+  };
+}
+
+function findLogoPlaceholder(doc: Document) {
+  return Array.from(doc.querySelectorAll('[data-logo-slot], [id]')).find((element) => {
+    if (element.hasAttribute('data-logo-slot')) return true;
+    const id = element.getAttribute('id')?.toLowerCase() || '';
+    return id.includes('logo');
+  });
+}
+
+function getFallbackPlacement(doc: Document): LogoPlacement | null {
+  const cover06 = doc.querySelector('[id="A4 - 6"], [id="capa_6"]');
+  if (!cover06) return null;
+
+  // Cover 06 has no logo placeholder in the original Figma SVG. The area from
+  // x=24 to x=164 and y=34 to y=104 is free, above the proposal title and to
+  // the left of the photo mask. It behaves as a virtual logo slot and still
+  // honors the user's position, zoom and rotation controls.
+  return {
+    baseX: 24,
+    baseY: 34,
+    width: 140,
+    height: 70,
+    tagName: 'virtual-slot',
+    parent: cover06,
+  };
+}
+
+function resolveLogoPlacement(doc: Document): LogoPlacement | null {
+  const placeholder = findLogoPlaceholder(doc);
+  if (placeholder) {
+    const base = getLogoBasePosition(placeholder);
+    return {
+      ...base,
+      parent: placeholder.parentElement || doc.documentElement,
+      placeholder,
+    };
+  }
+
+  return getFallbackPlacement(doc);
 }
 
 export function applyLogo(doc: Document, logoUrl?: string | null, transform?: TransformConfig) {
   if (!logoUrl) return;
 
-  const logoElement = Array.from(doc.querySelectorAll('[id]')).find((element) => {
-    const id = element.getAttribute('id')?.toLowerCase() || '';
-    return id.includes('logo');
-  });
-  if (!logoElement) return;
+  const placement = resolveLogoPlacement(doc);
+  if (!placement) return;
 
-  const { baseX, baseY, tagName } = getLogoBasePosition(logoElement);
-  logoElement.setAttribute('display', 'none');
+  placement.placeholder?.setAttribute('display', 'none');
 
   const image = doc.createElementNS(SVG_NS, 'image');
   image.setAttribute('id', 'company-logo-image');
+  image.setAttribute('data-generated-logo', 'true');
   setHref(image, logoUrl);
   image.setAttribute('x', '0');
   image.setAttribute('y', '0');
-  image.setAttribute('width', '140');
-  image.setAttribute('height', '64');
-  image.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+  image.setAttribute('width', String(placement.width));
+  image.setAttribute('height', String(placement.height));
+  image.setAttribute('preserveAspectRatio', 'xMinYMid meet');
   image.setAttribute('display', 'block');
   image.setAttribute('opacity', '1');
   image.setAttribute('crossorigin', 'anonymous');
+  image.setAttribute('pointer-events', 'none');
 
-  const width = 140;
-  const height = 64;
-  const cx = width / 2;
-  const cy = height / 2;
+  const cx = placement.width / 2;
+  const cy = placement.height / 2;
   const t = transform || { x: 0, y: 0, zoom: 1, rotate: 0 };
-  const dx = baseX + (t.x || 0);
-  let dy = baseY + (t.y || 0);
-  if (tagName === 'path') dy = baseY - 20 + (t.y || 0);
+  const dx = placement.baseX + (t.x || 0);
+  let dy = placement.baseY + (t.y || 0);
 
-  const transformStr = `translate(${dx}, ${dy}) translate(${cx}, ${cy}) scale(${t.zoom || 1}) rotate(${t.rotate || 0}) translate(${-cx}, ${-cy})`;
+  // Preserve the historical vertical adjustment used by path placeholders.
+  // The virtual slot on cover 06 already has its final top-left coordinate.
+  if (placement.tagName === 'path') {
+    dy = placement.baseY - 20 + (t.y || 0);
+  }
+
+  const transformStr = [
+    `translate(${dx}, ${dy})`,
+    `translate(${cx}, ${cy})`,
+    `scale(${t.zoom || 1})`,
+    `rotate(${t.rotate || 0})`,
+    `translate(${-cx}, ${-cy})`,
+  ].join(' ');
+
   image.setAttribute('transform', transformStr);
-  logoElement.parentNode?.appendChild(image);
+  placement.parent.appendChild(image);
 }
