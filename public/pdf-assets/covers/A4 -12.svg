@@ -1,0 +1,108 @@
+<svg data-photo-mask-ready="true" xmlns="http://www.w3.org/2000/svg" width="595" height="842" viewBox="0 0 595 842" fill="none">
+  <defs>
+    <clipPath id="capa_12_clip"><rect width="595" height="842"/></clipPath>
+    <clipPath id="capa_12_photo_clip" clipPathUnits="userSpaceOnUse">
+      <path d="M595 252L20 451L338.087 587.047C344.978 589.994 352.324 591.734 359.804 592.192C368.513 592.725 377.241 591.51 385.473 588.617L595 515V252Z"/>
+    </clipPath>
+  </defs>
+
+  <g id="a4_12_root" clip-path="url(#capa_12_clip)">
+    <g id="capa_12">
+      <rect width="595" height="842" fill="#D9D9D9"/>
+
+      <g id="elementos_superiores">
+        <path id="cor_secundaria" d="M483.406 129.5L281 0H595V32L483.406 129.5Z" fill="#79ADD9"/>
+        <path id="cor_secundaria_2" d="M486 134L410 313L595 250V38L486 134Z" fill="#79ADD9"/>
+        <path d="M281 0L483.406 129.5L595 32" stroke="#D9D9D9" stroke-width="5"/>
+        <path d="M486 134L410 313L595 250" stroke="#D9D9D9" stroke-width="5"/>
+      </g>
+
+      <g id="logo_placeholder" data-logo-slot="true">
+        <text x="36" y="86" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#142637">SEU LOGO AQUI</text>
+      </g>
+
+      <g id="titulo_capa" font-family="Arial, Helvetica, sans-serif">
+        <text id="titulo_proposta" x="36" y="210" font-size="57" font-weight="700" fill="#79ADD9">PROPOSTA</text>
+        <text id="titulo_comercial" x="36" y="264" font-size="58" font-weight="700" fill="#142637">COMERCIAL</text>
+        <rect id="cor_destaque_2" x="37" y="278" width="344" height="4" fill="#F8B51F"/>
+        <text id="subtitulo_energia_solar" x="37" y="305" font-size="15" font-weight="700" fill="#142637">
+          <tspan>SOLUÇÃO COMPLETA EM </tspan><tspan fill="#F8B51F">ENERGIA SOLAR</tspan>
+        </text>
+      </g>
+
+      <g id="cover-photo" clip-path="url(#capa_12_photo_clip)" data-photo-mask="true" data-photo-bounds="20 252 575 341">
+        <g id="foto_aqui_placeholder">
+          <path id="foto_area" d="M595 252L20 451L338.087 587.047C344.978 589.994 352.324 591.734 359.804 592.192C368.513 592.725 377.241 591.51 385.473 588.617L595 515V252Z" fill="#000000"/>
+          <g id="foto_aqui_icon" fill="none" stroke="#524848" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="280" y="382" width="118" height="116" rx="8" transform="rotate(-14 280 382)"/>
+            <rect x="326" y="360" width="126" height="126" rx="8" transform="rotate(15 326 360)" fill="#000000"/>
+            <circle cx="380" cy="402" r="14" fill="#524848" stroke="none"/>
+            <path d="M329 465L356 435L379 456L414 426L450 475"/>
+          </g>
+        </g>
+        <g id="cover-photo-layer" data-dynamic-photo-layer="true"></g>
+      </g>
+
+      <g id="formas_inferiores">
+        <path id="cor_primaria" d="M0 459L338.087 593C343.7 595.4 348.8 599.1 352.8 603.8L470 784L391 842H0V459Z" fill="#142637"/>
+        <path id="painel_neutro_direito" d="M385.473 588.617L595 515V648L349 593C361.4 594.3 373.8 592.7 385.473 588.617Z" fill="#D9D9D9"/>
+        <path id="cor_destaque" d="M349 593L595 648V720L470 784L349 593Z" fill="#F8B51F"/>
+        <path id="painel_inferior_direito" d="M470 784L595 720V842H391L470 784Z" fill="#142637"/>
+        <path d="M0 459L338.087 593C343.7 595.4 348.8 599.1 352.8 603.8L470 784L595 720" stroke="#FFFFFF" stroke-width="5"/>
+        <path d="M385.473 588.617L595 515" stroke="#D9D9D9" stroke-width="4"/>
+      </g>
+
+      <g id="linhas_decorativas_inferiores" stroke="#FFFFFF" stroke-width="1.2" opacity="0.95">
+        <path d="M390 842L595 737"/><path d="M402 842L595 743"/><path d="M414 842L595 749"/>
+        <path d="M426 842L595 755"/><path d="M438 842L595 761"/><path d="M450 842L595 767"/>
+        <path d="M462 842L595 773"/><path d="M474 842L595 779"/><path d="M486 842L595 785"/>
+        <path d="M498 842L595 791"/><path d="M510 842L595 797"/><path d="M522 842L595 803"/>
+      </g>
+
+      <g id="icones_sustentabilidade" stroke="#FFFFFF" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M42 609L59 578H94L112 609L94 640H59L42 609Z"/>
+        <path d="M53 616H98M59 590H91L97 616H54L59 590ZM65 590L63 616M74 590L73 616M83 590L84 616M92 590L94 616"/>
+        <circle cx="91" cy="591" r="6"/>
+        <path d="M126 586L143 556H178L196 586L178 617H143L126 586Z"/>
+        <path d="M162 565L151 586H160L155 605L174 579H164L169 565H162Z"/>
+        <circle cx="133" cy="584" r="2.5"/>
+        <path d="M178 621L195 592H230L248 621L230 652H195L178 621Z"/>
+        <path d="M210 640C196 629 201 610 225 602C226 622 220 637 210 640ZM207 638C211 625 216 616 224 607"/>
+      </g>
+
+      <g id="informacoes_proposta" font-family="Arial, Helvetica, sans-serif">
+        <g id="cliente">
+          <circle cx="61" cy="674" r="15" fill="#79ADD9" stroke="#000000" stroke-width="2"/>
+          <circle cx="61" cy="670" r="4" fill="#142637"/>
+          <path d="M53 683C54 677 57 675 61 675C65 675 68 677 69 683H53Z" fill="#142637"/>
+          <text id="cliente_label" x="82" y="671" font-size="13" font-weight="700" fill="#79ADD9">CLIENTE</text>
+          <text id="cliente_nome_placeholder" data-bind="clientName" x="82" y="688" font-size="11" font-weight="500" fill="#000000">NOME SOBRENOME</text>
+        </g>
+
+        <g id="localizacao">
+          <circle cx="61" cy="734" r="15" fill="#79ADD9" stroke="#000000" stroke-width="2"/>
+          <path d="M61 724C56 724 53 728 53 732C53 738 61 744 61 744C61 744 69 738 69 732C69 728 66 724 61 724Z" fill="#142637"/>
+          <circle cx="61" cy="732" r="2.8" fill="#79ADD9"/>
+          <text id="localizacao_label" x="82" y="731" font-size="13" font-weight="700" fill="#79ADD9">LOCALIZAÇÃO</text>
+          <text id="localizacao_valor_placeholder" data-bind="cityState" x="82" y="748" font-size="11" font-weight="500" fill="#000000">CIDADE - ESTADO</text>
+        </g>
+
+        <g id="data">
+          <circle cx="61" cy="794" r="15" fill="#79ADD9" stroke="#000000" stroke-width="2"/>
+          <rect x="54" y="787" width="14" height="13" rx="2" fill="#142637"/>
+          <path d="M54 791H68M58 785V789M64 785V789" stroke="#79ADD9" stroke-width="1.5"/>
+          <text id="data_label" x="82" y="791" font-size="13" font-weight="700" fill="#79ADD9">DATA</text>
+          <text id="data_valor_placeholder" data-bind="proposalDate" x="82" y="808" font-size="11" font-weight="500" fill="#000000">DD / MM / AA</text>
+          <text id="validade_texto" data-bind="validity" x="82" y="825" font-size="10" font-weight="500" fill="#000000">validade: 7 dias</text>
+        </g>
+
+        <g id="potencia">
+          <circle cx="426" cy="674" r="16" fill="#F8B51F" stroke="#FFFFFF" stroke-width="2"/>
+          <path d="M427 661L418 675H425L422 688L435 670H428L432 661H427Z" fill="#D9D9D9"/>
+          <text id="potencia_label" x="450" y="671" font-size="13" font-weight="700" fill="#D9D9D9">POTÊNCIA NOMINAL</text>
+          <text id="potencia_valor_placeholder" data-bind="powerKwp" data-text-anchor="start" x="450" y="697" font-size="24" font-weight="700" fill="#D9D9D9">0.00 kWp</text>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
