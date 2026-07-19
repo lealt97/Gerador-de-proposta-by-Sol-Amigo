@@ -38,7 +38,7 @@ Este documento acompanha a preparação do produto para lançamento comercial. U
 - [x] Testes de isolamento entre contas distintas
 - [x] Adicionar testes E2E com Playwright
 
-Evidência atual: 115 testes automatizados do núcleo e 7 testes E2E com Playwright aprovados no GitHub Actions. A cobertura inclui cálculos, autenticação, recuperação de senha, MFA, clientes, propostas, kits solares, geração e armazenamento de PDF, fluxo público, regressões das políticas RLS e Storage, encaixe proporcional de logos, ajuste de nomes e endereços longos, enquadramento de imagens verticais e horizontais, paletas e cores estáticas de contraste, navegação pública, validação de formulários, redirecionamento de rotas protegidas, recuperação de senha, aprovação e recusa pelo navegador. A validação no Supabase ativo executou 21 verificações transacionais com duas identidades distintas para clientes, propostas, kits, modelos de PDF, PDFs privados, logos e recursos de PDF, com TypeScript completo e build de produção aprovados.
+Evidência atual: 119 testes automatizados do núcleo e 7 testes E2E com Playwright aprovados no GitHub Actions. A cobertura inclui cálculos, autenticação, recuperação de senha, MFA, clientes, propostas, kits solares, geração e armazenamento de PDF, fluxo público, regressões das políticas RLS e Storage, encaixe proporcional de logos, ajuste de nomes e endereços longos, enquadramento de imagens verticais e horizontais, paletas e cores estáticas de contraste, geração repetida sem perda estrutural de qualidade, navegação pública, validação de formulários, redirecionamento de rotas protegidas, recuperação de senha, aprovação e recusa pelo navegador. A validação no Supabase ativo executou 21 verificações transacionais com duas identidades distintas para clientes, propostas, kits, modelos de PDF, PDFs privados, logos e recursos de PDF, com TypeScript completo e build de produção aprovados.
 
 ### PDFs e editor visual
 
@@ -46,7 +46,7 @@ Evidência atual: 115 testes automatizados do núcleo e 7 testes E2E com Playwri
 - [x] Validar nomes e endereços longos sem cortes
 - [x] Validar imagens verticais e horizontais
 - [x] Validar todas as paletas e cores de contraste
-- [ ] Testar geração repetida sem perda de qualidade
+- [x] Testar geração repetida sem perda de qualidade
 - [ ] Testar PDF em navegadores e dispositivos diferentes
 - [ ] Definir limite aceitável de tamanho do arquivo final
 
@@ -57,6 +57,8 @@ Evidência de textos longos: nomes empresariais, nomes pessoais, cidades e ender
 Evidência de imagens: os 12 modelos A4 foram verificados quanto à existência de área de foto reconhecida pelo motor. Imagens paisagem e retrato usam `preserveAspectRatio` em modo `slice`, mantendo a proporção original, preenchendo integralmente a máscara e recortando somente o excedente. O zoom mínimo de 100% e o limite dos deslocamentos impedem o aparecimento de bordas vazias, enquanto o seletor de foco permite priorizar a região desejada.
 
 Evidência de paletas e contraste: os 12 presets mantêm as quatro funções de cor (`primary`, `secondary`, `accent` e `neutral`) com valores hexadecimais válidos. A auditoria confirma que cada função original continua vinculada à mesma função ao trocar a paleta e que branco, transparências e preenchimentos técnicos permanecem estáticos. A capa 12 conserva `#D9D9D9` como cinza estrutural fixo e trata preto como função neutra. Esta validação não alterou SVGs, paletas nem o comportamento visual existente; foram adicionados somente testes de regressão e este registro.
+
+Evidência de geração repetida: a proposta completa foi renderizada três vezes consecutivas pelo mesmo fluxo usado na aplicação. As execuções mantiveram o número de páginas, objetos, streams, fontes e imagens, com variação máxima permitida de 5% no tamanho do arquivo e sem mutação dos dados de entrada. O gerador passou a rejeitar arquivos sem cabeçalho, marcador final, páginas, objetos ou streams suficientes antes do upload; o documento comercial exige pelo menos 10 páginas e 4.096 bytes.
 
 ## Fase 2 — Supabase e segurança
 
