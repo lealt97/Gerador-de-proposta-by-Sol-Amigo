@@ -6,6 +6,9 @@ REPORT_BASE="${1:-migration-report}"
 REPORT_DIR="${REPORT_BASE}/database-backup-restore"
 BACKUP_FILE="${REPORT_DIR}/solamigo-logical-data.backup"
 CONTAINER_BACKUP_FILE="/tmp/solamigo-logical-data.backup"
+AUTH_LIST="/tmp/solamigo-auth.list"
+PUBLIC_LIST="/tmp/solamigo-public.list"
+STORAGE_LIST="/tmp/solamigo-storage.list"
 BEFORE_FILE="${REPORT_DIR}/fingerprint-before.txt"
 REMOVED_FILE="${REPORT_DIR}/fingerprint-after-removal.txt"
 AFTER_FILE="${REPORT_DIR}/fingerprint-after-restore.txt"
@@ -26,7 +29,9 @@ snapshot() {
 
 cleanup_fixture() {
   psql_cmd -f supabase/tests/database_backup_cleanup.sql >/dev/null 2>&1 || true
-  docker exec "${DB_CONTAINER}" rm -f "${CONTAINER_BACKUP_FILE}" >/dev/null 2>&1 || true
+  docker exec "${DB_CONTAINER}" rm -f \
+    "${CONTAINER_BACKUP_FILE}" "${AUTH_LIST}" "${PUBLIC_LIST}" "${STORAGE_LIST}" \
+    >/dev/null 2>&1 || true
 }
 
 trap cleanup_fixture EXIT
@@ -61,7 +66,8 @@ TABLE_ARGS=(
 )
 
 printf '2. Gerando backup lógico em formato custom\n'
-docker exec "${DB_CONTAINER}" rm -f "${CONTAINER_BACKUP_FILE}"
+docker exec "${DB_CONTAINER}" rm -f \
+  "${CONTAINER_BACKUP_FILE}" "${AUTH_LIST}" "${PUBLIC_LIST}" "${STORAGE_LIST}"
 docker exec "${DB_CONTAINER}" pg_dump \
   --username=postgres \
   --dbname=postgres \
@@ -99,17 +105,54 @@ awk -F '|' '
   END { exit bad }
 ' "${REMOVED_FILE}"
 
-printf '4. Restaurando o backup lógico\n'
-docker exec "${DB_CONTAINER}" pg_restore \
-  --username=postgres \
-  --dbname=postgres \
-  --data-only \
-  --disable-triggers \
-  --no-owner \
-  --no-privileges \
-  --exit-on-error \
-  "${CONTAINER_BACKUP_FILE}" \
-  2>&1 | tee "${REPORT_DIR}/restore.log"
+printf '4. Restaurando o backup lógico por proprietário\n'
+docker exec "${DB_CONTAINER}" sh -lc \
+  "pg_restore --list '${CONTAINER_BACKUP_FILE}' | grep 'TABLE DATA auth ' > '${AUTH_LIST}'"
+docker exec "${DB_CONTAINER}" sh -lc \
+  "pg_restore --list '${CONTAINER_BACKUP_FILE}' | grep 'TABLE DATA public ' > '${PUBLIC_LIST}'"
+docker exec "${DB_CONTAINER}" sh -lc \
+  "pg_restore --list '${CONTAINER_BACKUP_FILE}' | grep 'TABLE DATA storage ' > '${STORAGE_LIST}'"
+
+{
+  printf '%s\n' '--- auth: supabase_auth_admin ---'
+  docker exec "${DB_CONTAINER}" pg_restore \
+    --username=postgres \
+    --dbname=postgres \
+    --data-only \
+    --disable-triggers \
+    --role=supabase_auth_admin \
+    --no-owner \
+    --no-privileges \
+    --exit-on-error \
+    --use-list="${AUTH_LIST}" \
+    "${CONTAINER_BACKUP_FILE}"
+
+  printf '%s\n' '--- public: postgres ---'
+  docker exec "${DB_CONTAINER}" pg_restore \
+    --username=postgres \
+    --dbname=postgres \
+    --data-only \
+    --disable-triggers \
+    --role=postgres \
+    --no-owner \
+    --no-privileges \
+    --exit-on-error \
+    --use-list="${PUBLIC_LIST}" \
+    "${CONTAINER_BACKUP_FILE}"
+
+  printf '%s\n' '--- storage: supabase_storage_admin ---'
+  docker exec "${DB_CONTAINER}" pg_restore \
+    --username=postgres \
+    --dbname=postgres \
+    --data-only \
+    --disable-triggers \
+    --role=supabase_storage_admin \
+    --no-owner \
+    --no-privileges \
+    --exit-on-error \
+    --use-list="${STORAGE_LIST}" \
+    "${CONTAINER_BACKUP_FILE}"
+} 2>&1 | tee "${REPORT_DIR}/restore.log"
 
 snapshot | tee "${AFTER_FILE}"
 diff -u "${BEFORE_FILE}" "${AFTER_FILE}" \
@@ -192,7 +235,8 @@ awk -F '|' '
   END { exit bad }
 ' "${REPORT_DIR}/fingerprint-final-cleanup.txt"
 
-docker exec "${DB_CONTAINER}" rm -f "${CONTAINER_BACKUP_FILE}"
+docker exec "${DB_CONTAINER}" rm -f \
+  "${CONTAINER_BACKUP_FILE}" "${AUTH_LIST}" "${PUBLIC_LIST}" "${STORAGE_LIST}"
 trap - EXIT
 
 cat > "${REPORT_DIR}/summary.txt" <<EOF
@@ -203,6 +247,7 @@ backup_sha256=$(sha256sum "${BACKUP_FILE}" | awk '{print $1}')
 fixture_tables=$(wc -l < "${BEFORE_FILE}" | tr -d ' ')
 storage_scope=database_metadata_only
 postgres_tools_source=supabase_database_container
+restore_roles=supabase_auth_admin,postgres,supabase_storage_admin
 EOF
 
 cat "${REPORT_DIR}/summary.txt"
