@@ -69,6 +69,16 @@ jobs:
           set -euo pipefail
           npx --yes supabase@2.39.2 db lint --local --level warning 2>&1 | tee migration-report/db-lint.txt
 
+      - name: Executar auditoria de RLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql --version | tee migration-report/psql-version.txt
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/rls_audit.sql \
+            2>&1 | tee migration-report/rls-audit.txt
+
       - name: Registrar status do ambiente
         if: always()
         shell: bash
