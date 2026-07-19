@@ -12,6 +12,9 @@ STORAGE_LIST="/tmp/solamigo-storage.list"
 BEFORE_FILE="${REPORT_DIR}/fingerprint-before.txt"
 REMOVED_FILE="${REPORT_DIR}/fingerprint-after-removal.txt"
 AFTER_FILE="${REPORT_DIR}/fingerprint-after-restore.txt"
+STORAGE_BEFORE_FILE="${REPORT_DIR}/storage-fingerprint-before.txt"
+STORAGE_REMOVED_FILE="${REPORT_DIR}/storage-fingerprint-after-removal.txt"
+STORAGE_AFTER_FILE="${REPORT_DIR}/storage-fingerprint-after-restore.txt"
 DB_CONTAINER="${DB_CONTAINER:-$(docker ps --filter 'name=^/supabase_db_' --format '{{.Names}}' | head -n 1)}"
 LOCAL_DB_PASSWORD="${LOCAL_DB_PASSWORD:-$(docker exec "${DB_CONTAINER}" printenv POSTGRES_PASSWORD 2>/dev/null || true)}"
 LOCAL_DB_PASSWORD="${LOCAL_DB_PASSWORD:-postgres}"
@@ -26,6 +29,12 @@ psql_cmd() {
 snapshot() {
   psql "${DB_URL}" -X -q -A -t -F '|' -v ON_ERROR_STOP=1 \
     -f supabase/tests/database_backup_snapshot.sql \
+    | sed '/^[[:space:]]*$/d'
+}
+
+storage_snapshot() {
+  psql "${DB_URL}" -X -q -A -t -F '|' -v ON_ERROR_STOP=1 \
+    -f supabase/tests/database_backup_storage_snapshot.sql \
     | sed '/^[[:space:]]*$/d'
 }
 
@@ -48,6 +57,8 @@ awk -F '|' '
   $2 != 1 { bad = 1 }
   END { exit bad }
 ' "${BEFORE_FILE}"
+
+storage_snapshot | tee "${STORAGE_BEFORE_FILE}"
 
 TABLE_ARGS=(
   --table=auth.users
@@ -100,12 +111,23 @@ printf '3. Simulando perda dos dados da aplicação\n'
 psql_cmd -f supabase/tests/database_backup_cleanup.sql \
   2>&1 | tee "${REPORT_DIR}/fixture-remove.log"
 
+printf '3.1. Simulando perda completa dos metadados do Storage\n'
+psql_cmd -c 'delete from storage.objects; delete from storage.buckets;' \
+  2>&1 | tee "${REPORT_DIR}/storage-metadata-remove.log"
+
 snapshot | tee "${REMOVED_FILE}"
 awk -F '|' '
   NF != 3 { bad = 1 }
   $2 != 0 { bad = 1 }
   END { exit bad }
 ' "${REMOVED_FILE}"
+
+storage_snapshot | tee "${STORAGE_REMOVED_FILE}"
+awk -F '|' '
+  NF != 3 { bad = 1 }
+  $2 != 0 { bad = 1 }
+  END { exit bad }
+' "${STORAGE_REMOVED_FILE}"
 
 printf '4. Restaurando o backup lógico por proprietário\n'
 docker exec "${DB_CONTAINER}" sh -lc \
@@ -159,6 +181,10 @@ docker exec "${DB_CONTAINER}" sh -lc \
 snapshot | tee "${AFTER_FILE}"
 diff -u "${BEFORE_FILE}" "${AFTER_FILE}" \
   | tee "${REPORT_DIR}/fingerprint-diff.txt"
+
+storage_snapshot | tee "${STORAGE_AFTER_FILE}"
+diff -u "${STORAGE_BEFORE_FILE}" "${STORAGE_AFTER_FILE}" \
+  | tee "${REPORT_DIR}/storage-fingerprint-diff.txt"
 
 printf '5. Validando vínculos restaurados\n'
 psql_cmd <<'SQL' 2>&1 | tee "${REPORT_DIR}/relational-integrity.log"
@@ -247,7 +273,7 @@ backup_format=pg_dump_custom_data_only
 backup_size_bytes=$(stat -c '%s' "${BACKUP_FILE}")
 backup_sha256=$(sha256sum "${BACKUP_FILE}" | awk '{print $1}')
 fixture_tables=$(wc -l < "${BEFORE_FILE}" | tr -d ' ')
-storage_scope=database_metadata_only
+storage_scope=complete_database_metadata
 postgres_tools_source=supabase_database_container
 restore_connections=supabase_auth_admin,postgres,supabase_storage_admin
 triggers=active
