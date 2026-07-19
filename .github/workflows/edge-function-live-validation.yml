@@ -1,0 +1,107 @@
+name: Edge Function PDF público — validação ao vivo
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-public-pdf-edge-function:
+    name: Validar endpoint público e PDF assinado
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EDGE_URL: https://ztlrnbailbcenkvtfoln.supabase.co/functions/v1/public-proposal-pdf
+      VALIDATION_TOKEN: cdb630433d3346a48b84817734c340e3
+
+    steps:
+      - name: Executar contrato HTTP completo
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const assert = (condition, message) => {
+            if (!condition) throw new Error(message);
+          };
+
+          const baseUrl = process.env.EDGE_URL;
+          const validToken = process.env.VALIDATION_TOKEN;
+          const unknownToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+          async function readJson(response, label) {
+            const text = await response.text();
+            try {
+              return JSON.parse(text);
+            } catch {
+              throw new Error(`${label}: resposta não é JSON válido`);
+            }
+          }
+
+          async function expectJsonError(label, url, options, expectedStatus) {
+            const response = await fetch(url, { ...options, redirect: 'manual' });
+            assert(response.status === expectedStatus, `${label}: esperado ${expectedStatus}, recebido ${response.status}`);
+            assert(response.headers.get('cache-control') === 'no-store', `${label}: Cache-Control incorreto`);
+            assert(response.headers.get('access-control-allow-origin') === '*', `${label}: CORS ausente`);
+            assert((response.headers.get('content-type') || '').includes('application/json'), `${label}: Content-Type incorreto`);
+            const body = await readJson(response, label);
+            assert(typeof body.error === 'string' && body.error.length > 0, `${label}: erro não informado`);
+          }
+
+          const options = await fetch(baseUrl, { method: 'OPTIONS', redirect: 'manual' });
+          assert(options.status === 200, `OPTIONS: esperado 200, recebido ${options.status}`);
+          assert(options.headers.get('access-control-allow-origin') === '*', 'OPTIONS: CORS ausente');
+          assert((options.headers.get('access-control-allow-methods') || '').includes('GET'), 'OPTIONS: GET não permitido');
+          assert((options.headers.get('access-control-allow-methods') || '').includes('POST'), 'OPTIONS: POST não permitido');
+
+          await expectJsonError('GET sem token', baseUrl, { method: 'GET' }, 400);
+          await expectJsonError('GET token curto', `${baseUrl}?token=abc`, { method: 'GET' }, 400);
+          await expectJsonError('GET token inexistente', `${baseUrl}?token=${unknownToken}`, { method: 'GET' }, 404);
+          await expectJsonError('PUT não permitido', `${baseUrl}?token=${validToken}`, { method: 'PUT' }, 405);
+          await expectJsonError(
+            'POST JSON inválido',
+            baseUrl,
+            { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' },
+            400,
+          );
+
+          const postResponse = await fetch(baseUrl, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ token: validToken }),
+            redirect: 'manual',
+          });
+          assert(postResponse.status === 200, `POST válido: esperado 200, recebido ${postResponse.status}`);
+          assert(postResponse.headers.get('cache-control') === 'no-store', 'POST válido: Cache-Control incorreto');
+          const postBody = await readJson(postResponse, 'POST válido');
+          assert(postBody.expiresIn === 900, `POST válido: expiração inesperada (${postBody.expiresIn})`);
+          assert(typeof postBody.signedUrl === 'string' && postBody.signedUrl.startsWith('https://'), 'POST válido: URL assinada ausente');
+          assert(postBody.signedUrl.includes('/storage/v1/object/sign/proposals/'), 'POST válido: URL não pertence ao bucket privado proposals');
+
+          const getResponse = await fetch(`${baseUrl}?token=${validToken}`, {
+            method: 'GET',
+            redirect: 'manual',
+          });
+          assert(getResponse.status === 302, `GET válido: esperado 302, recebido ${getResponse.status}`);
+          assert(getResponse.headers.get('cache-control') === 'no-store', 'GET válido: Cache-Control incorreto');
+          assert(getResponse.headers.get('access-control-allow-origin') === '*', 'GET válido: CORS ausente');
+          const redirectUrl = getResponse.headers.get('location');
+          assert(redirectUrl && redirectUrl.includes('/storage/v1/object/sign/proposals/'), 'GET válido: redirecionamento assinado ausente');
+
+          const pdfResponse = await fetch(postBody.signedUrl, { redirect: 'follow' });
+          assert(pdfResponse.status === 200, `PDF: esperado 200, recebido ${pdfResponse.status}`);
+          assert((pdfResponse.headers.get('content-type') || '').includes('application/pdf'), 'PDF: Content-Type incorreto');
+          const pdf = Buffer.from(await pdfResponse.arrayBuffer());
+          assert(pdf.length >= 4096, `PDF: arquivo muito pequeno (${pdf.length} bytes)`);
+          assert(pdf.subarray(0, 5).toString('ascii') === '%PDF-', 'PDF: cabeçalho inválido');
+          assert(pdf.subarray(Math.max(0, pdf.length - 2048)).toString('latin1').includes('%%EOF'), 'PDF: marcador final ausente');
+
+          console.log(JSON.stringify({
+            result: 'passed',
+            methods: ['OPTIONS', 'GET', 'POST', 'PUT'],
+            signedUrlExpiresInSeconds: postBody.expiresIn,
+            pdfBytes: pdf.length,
+            pdfContentType: pdfResponse.headers.get('content-type'),
+          }));
+          NODE
