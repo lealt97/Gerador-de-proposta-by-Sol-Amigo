@@ -3,7 +3,7 @@
 --
 -- Em instalações antigas, as tabelas e políticas abaixo podem ter sido
 -- criadas manualmente antes do versionamento. Removemos somente políticas
--- que serão recriadas imediatamente pela migration-base seguinte.
+-- que serão recriadas imediatamente pelas migrations seguintes.
 -- Em um banco vazio, este arquivo não realiza alterações.
 -- =========================================================
 
@@ -57,6 +57,17 @@ begin
     execute 'drop policy if exists "Usuarios podem inserir seus proprios templates de pdf" on public.pdf_templates';
     execute 'drop policy if exists "Usuarios podem atualizar seus proprios templates de pdf" on public.pdf_templates';
     execute 'drop policy if exists "Usuarios podem deletar seus proprios templates de pdf" on public.pdf_templates';
+  end if;
+
+  if to_regclass('public.pdf_template_presets') is not null then
+    execute 'drop policy if exists "Presets are viewable by all users" on public.pdf_template_presets';
+  end if;
+
+  if to_regclass('public.pdf_user_models') is not null then
+    execute 'drop policy if exists "Users can view their own models" on public.pdf_user_models';
+    execute 'drop policy if exists "Users can insert their own models" on public.pdf_user_models';
+    execute 'drop policy if exists "Users can update their own models" on public.pdf_user_models';
+    execute 'drop policy if exists "Users can delete their own models" on public.pdf_user_models';
   end if;
 end
 $$;
