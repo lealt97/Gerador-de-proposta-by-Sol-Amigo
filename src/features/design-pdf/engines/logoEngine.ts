@@ -1,5 +1,10 @@
 import { TransformConfig } from '../types/pdfDesignTypes';
 import { SVG_NS, setHref } from './svgDom';
+import {
+  COVER_06_LOGO_SLOT,
+  DEFAULT_LOGO_SLOT,
+  LOGO_PRESERVE_ASPECT_RATIO,
+} from './logoLayout';
 
 type LogoPlacement = {
   baseX: number;
@@ -48,8 +53,8 @@ function getLogoBasePosition(logoElement: Element): Omit<LogoPlacement, 'parent'
   return {
     baseX,
     baseY,
-    width: 140,
-    height: 64,
+    width: DEFAULT_LOGO_SLOT.width,
+    height: DEFAULT_LOGO_SLOT.height,
     tagName,
   };
 }
@@ -73,8 +78,8 @@ function getFallbackPlacement(doc: Document): LogoPlacement | null {
   return {
     baseX: 24,
     baseY: 34,
-    width: 140,
-    height: 70,
+    width: COVER_06_LOGO_SLOT.width,
+    height: COVER_06_LOGO_SLOT.height,
     tagName: 'virtual-slot',
     parent: cover06,
   };
@@ -110,7 +115,7 @@ export function applyLogo(doc: Document, logoUrl?: string | null, transform?: Tr
   image.setAttribute('y', '0');
   image.setAttribute('width', String(placement.width));
   image.setAttribute('height', String(placement.height));
-  image.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+  image.setAttribute('preserveAspectRatio', LOGO_PRESERVE_ASPECT_RATIO);
   image.setAttribute('display', 'block');
   image.setAttribute('opacity', '1');
   image.setAttribute('crossorigin', 'anonymous');
