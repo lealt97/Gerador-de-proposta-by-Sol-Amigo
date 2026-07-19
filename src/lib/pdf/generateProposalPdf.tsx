@@ -10,6 +10,7 @@ import {
   createPdfGenerationOperations,
   type PdfMetadataInput,
 } from './pdfGenerationOperations';
+import { validatePdfBlob } from './pdfQuality';
 
 async function resolvePdfModel(
   proposal: Proposal,
@@ -95,13 +96,20 @@ async function renderProposalPdf(
     console.warn('Could not load custom cover template, falling back to default', templateError);
   }
 
-  return pdf(
+  const blob = await pdf(
     <ProposalDocument
       proposal={enrichedProposal}
       coverImage={coverImage}
       pdfTheme={selectedModel?.theme}
     />,
   ).toBlob();
+
+  await validatePdfBlob(blob, {
+    minByteLength: 4_096,
+    minPages: 10,
+  });
+
+  return blob;
 }
 
 async function uploadProposalPdf(storagePath: string, blob: Blob) {
