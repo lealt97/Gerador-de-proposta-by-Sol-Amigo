@@ -10,7 +10,7 @@ import {
   createPdfGenerationOperations,
   type PdfMetadataInput,
 } from './pdfGenerationOperations';
-import { validatePdfBlob } from './pdfQuality';
+import { PDF_SIZE_LIMITS, validatePdfBlob } from './pdfQuality';
 
 async function resolvePdfModel(
   proposal: Proposal,
@@ -106,6 +106,7 @@ async function renderProposalPdf(
 
   await validatePdfBlob(blob, {
     minByteLength: 4_096,
+    maxByteLength: PDF_SIZE_LIMITS.hardMaxBytes,
     minPages: 10,
   });
 

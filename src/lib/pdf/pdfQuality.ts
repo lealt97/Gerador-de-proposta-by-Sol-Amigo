@@ -1,3 +1,8 @@
+export const PDF_SIZE_LIMITS = Object.freeze({
+  recommendedMaxBytes: 5 * 1024 * 1024,
+  hardMaxBytes: 15 * 1024 * 1024,
+});
+
 export type PdfQualityMetrics = {
   byteLength: number;
   pageCount: number;
@@ -12,6 +17,7 @@ export type PdfQualityMetrics = {
 
 export type PdfQualityRequirements = {
   minByteLength?: number;
+  maxByteLength?: number;
   minPages?: number;
 };
 
@@ -21,6 +27,10 @@ function countMatches(source: string, pattern: RegExp) {
 
 function assertCondition(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+function formatMiB(bytes: number) {
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
 }
 
 export async function inspectPdfBlob(blob: Blob): Promise<PdfQualityMetrics> {
@@ -48,8 +58,14 @@ export function assertPdfQuality(
   requirements: PdfQualityRequirements = {},
 ) {
   const minByteLength = requirements.minByteLength ?? 512;
+  const maxByteLength = requirements.maxByteLength;
   const minPages = requirements.minPages ?? 1;
 
+  assertCondition(minByteLength >= 0, 'O tamanho mínimo configurado para o PDF é inválido.');
+  assertCondition(
+    maxByteLength === undefined || maxByteLength >= minByteLength,
+    'O tamanho máximo configurado para o PDF é inválido.',
+  );
   assertCondition(metrics.hasPdfHeader, 'O arquivo gerado não possui cabeçalho PDF válido.');
   assertCondition(metrics.hasEofMarker, 'O arquivo gerado não possui marcador de encerramento PDF.');
   assertCondition(
@@ -59,6 +75,10 @@ export function assertPdfQuality(
   assertCondition(
     metrics.byteLength >= minByteLength,
     `O PDF gerado possui apenas ${metrics.byteLength} bytes; mínimo esperado: ${minByteLength}.`,
+  );
+  assertCondition(
+    maxByteLength === undefined || metrics.byteLength <= maxByteLength,
+    `O PDF gerado possui ${formatMiB(metrics.byteLength)}; limite máximo: ${formatMiB(maxByteLength || 0)}.`,
   );
   assertCondition(
     metrics.pageCount >= minPages,
