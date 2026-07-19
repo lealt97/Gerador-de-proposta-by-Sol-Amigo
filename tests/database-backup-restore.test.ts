@@ -6,6 +6,7 @@ const WORKFLOW_PATH = '.github/workflows/migrations-homologation.yml';
 const SCRIPT_PATH = '.github/scripts/test-database-backup-restore.sh';
 const FIXTURE_PATH = 'supabase/tests/database_backup_fixture.sql';
 const SNAPSHOT_PATH = 'supabase/tests/database_backup_snapshot.sql';
+const STORAGE_SNAPSHOT_PATH = 'supabase/tests/database_backup_storage_snapshot.sql';
 const CLEANUP_PATH = 'supabase/tests/database_backup_cleanup.sql';
 
 test('workflow executa homologação de backup e restauração em Supabase local', async () => {
@@ -58,17 +59,20 @@ test('restauração usa proprietários internos com gatilhos ativos e ordem cont
   assert.doesNotMatch(script, /--disable-triggers/);
 });
 
-test('restauração exige igualdade de fingerprints e limpeza dos registros temporários', async () => {
-  const [script, fixture, snapshot, cleanup] = await Promise.all([
+test('restauração compara fixture e metadados completos do Storage', async () => {
+  const [script, fixture, snapshot, storageSnapshot, cleanup] = await Promise.all([
     readFile(SCRIPT_PATH, 'utf8'),
     readFile(FIXTURE_PATH, 'utf8'),
     readFile(SNAPSHOT_PATH, 'utf8'),
+    readFile(STORAGE_SNAPSHOT_PATH, 'utf8'),
     readFile(CLEANUP_PATH, 'utf8'),
   ]);
 
   assert.match(script, /diff -u "\$\{BEFORE_FILE\}" "\$\{AFTER_FILE\}"/);
+  assert.match(script, /diff -u "\$\{STORAGE_BEFORE_FILE\}" "\$\{STORAGE_AFTER_FILE\}"/);
+  assert.match(script, /delete from storage\.objects; delete from storage\.buckets;/);
   assert.match(script, /fingerprint-final-cleanup\.txt/);
-  assert.match(script, /storage_scope=database_metadata_only/);
+  assert.match(script, /storage_scope=complete_database_metadata/);
 
   assert.match(fixture, /backup-restore@solamigo\.invalid/);
   assert.doesNotMatch(fixture, /encrypted_password/);
@@ -77,6 +81,8 @@ test('restauração exige igualdade de fingerprints e limpeza dos registros temp
 
   assert.match(snapshot, /md5\(coalesce\(string_agg\(to_jsonb\(t\)::text/);
   assert.match(snapshot, /order by table_name/);
+  assert.match(storageSnapshot, /storage\.buckets/);
+  assert.match(storageSnapshot, /storage\.objects/);
 
   assert.match(cleanup, /delete from public\.proposal_events/);
   assert.match(cleanup, /delete from auth\.users/);
