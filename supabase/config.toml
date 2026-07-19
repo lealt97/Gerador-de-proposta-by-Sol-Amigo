@@ -1,2 +1,5 @@
 [functions.public-proposal-pdf]
 verify_jwt = false
+
+[functions.mfa-recovery]
+verify_jwt = true

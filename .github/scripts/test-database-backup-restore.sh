@@ -64,6 +64,7 @@ TABLE_ARGS=(
   --table=auth.users
   --table=auth.identities
   --table=auth.mfa_factors
+  --table=public.mfa_recovery_codes
   --table=public.profiles
   --table=public.clients
   --table=public.solar_kits
@@ -101,7 +102,7 @@ test -s "${BACKUP_FILE}"
 test "$(stat -c '%s' "${BACKUP_FILE}")" -ge 2048
 
 for table_name in \
-  users identities mfa_factors profiles clients solar_kits proposals \
+  users identities mfa_factors mfa_recovery_codes profiles clients solar_kits proposals \
   solar_system_calculations proposal_loads proposal_events pdf_templates \
   pdf_user_models proposal_sequences buckets objects; do
   grep -Eq "TABLE DATA [^ ]+ ${table_name} " "${REPORT_DIR}/archive-manifest.txt"
@@ -205,10 +206,12 @@ select pg_temp.assert_true(
     from auth.users u
     join auth.identities i on i.user_id = u.id
     join auth.mfa_factors m on m.user_id = u.id
+    join public.mfa_recovery_codes r on r.user_id = u.id and r.factor_id = m.id
     join public.profiles p on p.id = u.id
     where u.id = 'b1000000-0000-4000-8000-000000000001'
+      and r.id = 'b1000000-0000-4000-8000-000000000004'
   ),
-  'identidade, MFA ou perfil não foi restaurado'
+  'identidade, MFA, código de recuperação ou perfil não foi restaurado'
 );
 
 select pg_temp.assert_true(

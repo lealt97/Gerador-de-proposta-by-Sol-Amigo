@@ -14,6 +14,10 @@ with fingerprints as (
          md5(coalesce(string_agg(to_jsonb(t)::text, '|' order by id::text), ''))
   from auth.mfa_factors t where id = 'b1000000-0000-4000-8000-000000000003'
   union all
+  select 'public.mfa_recovery_codes', count(*)::bigint,
+         md5(coalesce(string_agg(to_jsonb(t)::text, '|' order by id::text), ''))
+  from public.mfa_recovery_codes t where id = 'b1000000-0000-4000-8000-000000000004'
+  union all
   select 'public.profiles', count(*)::bigint,
          md5(coalesce(string_agg(to_jsonb(t)::text, '|' order by id::text), ''))
   from public.profiles t where id = 'b1000000-0000-4000-8000-000000000001'
