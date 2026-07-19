@@ -1,0 +1,77 @@
+name: Migrations — Homologação local
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-migrations:
+    name: Aplicar migrations em Supabase local
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Registrar inventário de migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p migration-report
+          find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tee migration-report/repository-migrations.txt
+          test -s migration-report/repository-migrations.txt
+
+      - name: Iniciar Supabase local
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.39.2 start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+
+      - name: Recriar banco e aplicar todas as migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.39.2 db reset --local 2>&1 | tee migration-report/db-reset.log
+
+      - name: Confirmar migrations aplicadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.39.2 migration list --local 2>&1 | tee migration-report/applied-migrations.txt
+
+      - name: Auditar schema após migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.39.2 db lint --local --level warning 2>&1 | tee migration-report/db-lint.txt
+
+      - name: Registrar status do ambiente
+        if: always()
+        shell: bash
+        run: |
+          npx --yes supabase@2.39.2 status 2>&1 | tee migration-report/supabase-status.txt || true
+
+      - name: Publicar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations-homologation-report
+          path: migration-report
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Encerrar Supabase local
+        if: always()
+        shell: bash
+        run: npx --yes supabase@2.39.2 stop --no-backup || true
