@@ -6,6 +6,7 @@ import { PdfUserModel } from '../../types/pdfModels';
 import { supabase } from '../supabase/client';
 import { resolveStorageAssetUrl } from '../storage/privateAsset';
 import { pdfModelService } from '../../services/pdfModelService';
+import { monitoringService } from '../../services/monitoringService';
 import { generateSvgCoverImage } from './utils/svgToImage';
 import {
   createPdfGenerationOperations,
@@ -180,5 +181,17 @@ export async function generateAndUploadPdf(
   proposal: Proposal,
   selectedModelId?: string | null,
 ): Promise<string | null> {
-  return pdfGenerationOperations.generateAndStore(proposal, selectedModelId);
+  try {
+    return await pdfGenerationOperations.generateAndStore(proposal, selectedModelId);
+  } catch (error) {
+    void monitoringService.capture('pdf.generation_failed', {
+      error,
+      fingerprint: 'pdf.generation_failed',
+      metadata: {
+        proposal_id: proposal.id,
+        has_selected_model: Boolean(selectedModelId),
+      },
+    });
+    throw error;
+  }
 }
