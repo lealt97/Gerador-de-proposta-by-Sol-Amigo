@@ -173,6 +173,7 @@ Consulte também:
 - `docs/ENVIRONMENT_VARIABLES.md`
 - `docs/DISASTER_RECOVERY_RUNBOOK.md`
 - `docs/MFA_LOST_PHONE_PROCEDURE.md`
+- `docs/ADMIN_ACCOUNT_RECOVERY_PROCESS.md`
 - `docs/PROJECT_COMPLETION_CHECKLIST.md`
 
 ## Estado do projeto
