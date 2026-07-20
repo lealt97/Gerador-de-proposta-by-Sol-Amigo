@@ -138,7 +138,7 @@ test('falhas de configuração e autenticação retornam somente códigos saniti
   assert.doesNotMatch(JSON.stringify(unauthorized), /secret provider detail/);
 });
 
-test('função, banco, documentação e checklist preservam os limites da etapa', async () => {
+test('função, banco e documentação preservam os limites da etapa', async () => {
   const [edgeFunction, config, migration, environmentDoc, providerDoc, checklist] = await Promise.all([
     readFile('supabase/functions/billing-provider-readiness/index.ts', 'utf8'),
     readFile('supabase/config.toml', 'utf8'),
@@ -158,6 +158,5 @@ test('função, banco, documentação e checklist preservam os limites da etapa'
   assert.doesNotMatch(environmentDoc, /VITE_(CAKTO|STRIPE)/);
   assert.match(providerDoc, /Uma assinatura paga é controlada por apenas um provedor por vez/);
   assert.match(providerDoc, /checkout;[\s\S]*webhooks/);
-  assert.match(checklist, /- \[x\] Integrar provedor de pagamentos/);
-  assert.match(checklist, /Evidência da integração Cakto e Stripe:/);
+  assert.match(checklist, /- \[ \] Integrar provedor de pagamentos/);
 });
