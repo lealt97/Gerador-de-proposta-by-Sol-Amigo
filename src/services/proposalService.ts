@@ -199,7 +199,7 @@ async function persistProposalBundle(input: PersistProposalBundleInput): Promise
 async function getProposals(): Promise<Proposal[]> {
   const { data, error } = await supabase
     .from('proposals')
-    .select(`*, client:clients(${clientSelect}), profile:profiles(${profileSelect})`)
+    .select(`*, client:clients(${clientSelect}), solar:solar_system_calculations(installed_power_kwp), profile:profiles(${profileSelect})`)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
