@@ -3,6 +3,9 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const SETTINGS_PATH = 'src/pages/Configuracoes.tsx';
+const SETTINGS_ROUTE_PATH = 'src/pages/SettingsRoute.tsx';
+const ACCOUNT_DATA_PATH = 'src/pages/AccountData.tsx';
+const ACCOUNT_DELETE_PATH = 'supabase/functions/account-delete/index.ts';
 const MFA_SETTINGS_PATH = 'src/components/auth/MfaSettingsCard.tsx';
 const MIGRATION_PATH = 'supabase/migrations/20260719235500_require_recent_password_confirmation.sql';
 const SQL_TEST_PATH = 'supabase/tests/critical_password_confirmation.sql';
@@ -25,21 +28,32 @@ test('alteração de senha exige a senha atual antes da atualização', async ()
   );
 });
 
-test('exclusão de conta exige frase e senha antes da RPC protegida', async () => {
-  const settings = await readFile(SETTINGS_PATH, 'utf8');
-  const handlerStart = settings.indexOf('const handleDeleteAccount');
-  const handlerEnd = settings.indexOf('if (isLoading)');
-  const handler = settings.slice(handlerStart, handlerEnd);
+test('exclusão completa exige frase, senha recente e limpeza de arquivos', async () => {
+  const [accountPage, deleteFunction, settingsRoute] = await Promise.all([
+    readFile(ACCOUNT_DATA_PATH, 'utf8'),
+    readFile(ACCOUNT_DELETE_PATH, 'utf8'),
+    readFile(SETTINGS_ROUTE_PATH, 'utf8'),
+  ]);
 
-  assert.ok(handlerStart >= 0 && handlerEnd > handlerStart);
-  assert.match(handler, /excluir a conta/);
-  assert.match(handler, /if \(!deletePassword\)/);
-  assert.match(handler, /signInWithPassword\(\{ email: user\.email, password: deletePassword \}\)/);
-  assert.match(handler, /rpc\('delete_user_account'\)/);
+  assert.match(accountPage, /excluir a conta/);
+  assert.match(accountPage, /signInWithPassword/);
+  assert.match(accountPage, /accountDataService\.deleteAccount\(\)/);
   assert.ok(
-    handler.indexOf('signInWithPassword') < handler.indexOf("rpc('delete_user_account')"),
-    'a senha atual deve ser validada antes da exclusão',
+    accountPage.indexOf('signInWithPassword') < accountPage.indexOf('accountDataService.deleteAccount()'),
+    'a senha atual deve ser validada antes da exclusão completa',
   );
+
+  assert.match(deleteFunction, /PASSWORD_CONFIRMATION_MAX_AGE_SECONDS = 300/);
+  assert.match(deleteFunction, /method === 'password'/);
+  assert.match(deleteFunction, /removeStoragePaths/);
+  assert.match(deleteFunction, /admin\.auth\.admin\.deleteUser/);
+  assert.ok(
+    deleteFunction.lastIndexOf('removeStoragePaths') < deleteFunction.indexOf('admin.auth.admin.deleteUser'),
+    'os arquivos devem ser removidos antes de excluir o usuário',
+  );
+
+  assert.match(settingsRoute, /Encerramento da Conta/);
+  assert.match(settingsRoute, /navigate\('\/privacidade-dados'\)/);
 });
 
 test('desativação do MFA exige senha atual e TOTP na ordem correta', async () => {
@@ -66,7 +80,7 @@ test('desativação do MFA exige senha atual e TOTP na ordem correta', async () 
   );
 });
 
-test('banco exige autenticação por senha recente para excluir a conta', async () => {
+test('banco reconhece autenticação por senha recente e bloqueia a RPC legada', async () => {
   const [migration, sqlTest, workflow] = await Promise.all([
     readFile(MIGRATION_PATH, 'utf8'),
     readFile(SQL_TEST_PATH, 'utf8'),
@@ -82,6 +96,7 @@ test('banco exige autenticação por senha recente para excluir a conta', async 
   assert.match(sqlTest, /uma confirmação de senha expirada foi aceita/);
   assert.match(sqlTest, /uma confirmação de senha recente foi rejeitada/);
   assert.match(sqlTest, /magic link foi tratado como confirmação da senha atual/);
+  assert.match(sqlTest, /RPC legada permaneceu executável/);
   assert.match(workflow, /Testar confirmação de senha em operações críticas/);
   assert.match(workflow, /critical_password_confirmation\.sql/);
 });
