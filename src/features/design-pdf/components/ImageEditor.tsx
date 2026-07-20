@@ -1,8 +1,9 @@
-import { ChangeEvent } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { Upload } from 'lucide-react';
 import { Label } from '../../../components/ui/Label';
 import { MAX_ACCOUNT_LOGOS } from '../../../utils/logoHelper';
 import { PdfUserModel, TransformConfig } from '../types/pdfDesignTypes';
+import { pdfDesignService } from '../services/pdfDesignService';
 import { CoverPhotoFramingSelector } from './CoverPhotoFramingSelector';
 import { TransformControls } from './TransformControls';
 
@@ -27,9 +28,34 @@ export function ImageEditor({
   onTransformSet,
   onTransformReset,
 }: ImageEditorProps) {
+  const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState<string | null>(null);
   const accountLogos = [...new Set([profileLogo, ...availableLogos].filter(Boolean) as string[])]
     .slice(0, MAX_ACCOUNT_LOGOS);
   const hasSelectedAccountLogo = Boolean(model.logo_url && accountLogos.includes(model.logo_url));
+
+  useEffect(() => {
+    let active = true;
+
+    async function resolveCoverImage() {
+      if (!model.cover_image_url) {
+        setCoverImagePreviewUrl(null);
+        return;
+      }
+
+      try {
+        const resolved = await pdfDesignService.resolveAssetUrl(model.cover_image_url, 900);
+        if (active) setCoverImagePreviewUrl(resolved);
+      } catch (error) {
+        console.error('Error resolving private cover image:', error);
+        if (active) setCoverImagePreviewUrl(null);
+      }
+    }
+
+    resolveCoverImage();
+    return () => {
+      active = false;
+    };
+  }, [model.cover_image_url]);
 
   return (
     <div className="space-y-6">
@@ -83,23 +109,23 @@ export function ImageEditor({
       <section className="p-4 bg-white/5 rounded-xl border border-brand-border/60 space-y-4">
         <div>
           <Label className="text-slate-100 font-semibold">Foto da capa</Label>
-          <p className="text-xs text-slate-400 mt-1">A imagem é aplicada na área de foto do SVG selecionado.</p>
+          <p className="text-xs text-slate-400 mt-1">A imagem é privada e recebe acesso temporário somente durante a edição e a geração do PDF.</p>
         </div>
 
-        {model.cover_image_url && (
+        {coverImagePreviewUrl && (
           <div className="aspect-video rounded-lg overflow-hidden border border-brand-border bg-slate-950/40 flex items-center justify-center">
-            <img src={model.cover_image_url} alt="Foto de capa" className="w-full h-full object-contain" />
+            <img src={coverImagePreviewUrl} alt="Foto de capa" className="w-full h-full object-contain" />
           </div>
         )}
 
         <label className="w-full flex items-center justify-center gap-2 rounded-md border border-brand-border bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/15 hover:text-white cursor-pointer transition-colors">
           <Upload className="w-4 h-4" /> Enviar foto da capa
-          <input type="file" accept="image/*" className="hidden" onChange={(event) => onFileUpload(event, 'cover_image_url')} />
+          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => onFileUpload(event, 'cover_image_url')} />
         </label>
 
-        {model.cover_image_url && (
+        {coverImagePreviewUrl && (
           <>
-            <CoverPhotoFramingSelector imageUrl={model.cover_image_url} transform={model.cover_image_transform} onChange={(transform) => onTransformSet('cover_image_transform', transform)} onReset={() => onTransformReset('cover_image_transform')} />
+            <CoverPhotoFramingSelector imageUrl={coverImagePreviewUrl} transform={model.cover_image_transform} onChange={(transform) => onTransformSet('cover_image_transform', transform)} onReset={() => onTransformReset('cover_image_transform')} />
             <TransformControls label="Foto da capa" target="cover" value={model.cover_image_transform} onChange={(key, value) => onTransformChange('cover_image_transform', key, value)} onReset={() => onTransformReset('cover_image_transform')} />
           </>
         )}
