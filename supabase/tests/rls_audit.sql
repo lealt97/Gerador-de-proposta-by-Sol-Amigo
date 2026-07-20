@@ -71,7 +71,8 @@ select pg_temp.assert_true(
         'profiles', 'clients', 'proposals', 'proposal_loads',
         'solar_system_calculations', 'solar_kits',
         'pdf_templates', 'pdf_user_models', 'proposal_events',
-        'subscriptions', 'billing_events', 'account_usage'
+        'subscriptions', 'billing_events', 'account_usage',
+        'billing_checkout_sessions'
       )
       and concat_ws(' ', p.qual, p.with_check) not ilike '%auth.uid()%'
   ),
@@ -116,7 +117,7 @@ select pg_temp.assert_true(
   and not exists (
     select 1 from pg_policies
     where schemaname = 'public'
-      and tablename in ('mfa_security_events', 'billing_events')
+      and tablename in ('mfa_security_events', 'billing_events', 'application_events')
       and cmd in ('INSERT','UPDATE','DELETE')
   ),
   'uma tabela de eventos deixou de ser append-only para a API'
@@ -148,8 +149,10 @@ select pg_temp.assert_true(
 select pg_temp.assert_true(
   not has_table_privilege('authenticated', 'public.subscriptions', 'INSERT,UPDATE,DELETE')
   and not has_table_privilege('authenticated', 'public.billing_events', 'INSERT,UPDATE,DELETE')
-  and not has_table_privilege('authenticated', 'public.account_usage', 'INSERT,UPDATE,DELETE'),
-  'uma tabela privada de cobrança possui escrita direta pela API'
+  and not has_table_privilege('authenticated', 'public.account_usage', 'INSERT,UPDATE,DELETE')
+  and not has_table_privilege('authenticated', 'public.billing_checkout_sessions', 'INSERT,UPDATE,DELETE')
+  and not has_table_privilege('authenticated', 'public.application_events', 'SELECT,INSERT,UPDATE,DELETE'),
+  'uma tabela privada de cobrança ou monitoramento possui escrita direta pela API'
 );
 
 -- Toda função SECURITY DEFINER deve fixar search_path.
@@ -179,7 +182,9 @@ with internal(signature) as (
     ('public.set_billing_updated_at()'),
     ('public.handle_new_billing_account()'),
     ('public.initialize_billing_account(uuid)'),
-    ('public.audit_mfa_factor_state_change()')
+    ('public.audit_mfa_factor_state_change()'),
+    ('public.reserve_proposal_quota()'),
+    ('public.prevent_application_event_mutation()')
 ), resolved as (
   select signature, to_regprocedure(signature) as function_oid
   from internal
@@ -200,7 +205,8 @@ select pg_temp.assert_true(
 with authenticated_rpc(signature) as (
   values
     ('public.delete_user_account()'),
-    ('public.is_proposal_owner(uuid)')
+    ('public.is_proposal_owner(uuid)'),
+    ('public.get_my_proposal_quota()')
 ), resolved as (
   select signature, to_regprocedure(signature) as function_oid
   from authenticated_rpc
@@ -234,6 +240,27 @@ select pg_temp.assert_true(
   and not has_function_privilege('anon', to_regprocedure('public.next_proposal_code()'), 'EXECUTE')
   and not has_function_privilege('authenticated', to_regprocedure('public.next_proposal_code()'), 'EXECUTE'),
   'permissões das RPCs internas versionadas estão incorretas'
+);
+
+-- O processador de eventos de cobrança é exclusivo da service_role.
+select pg_temp.assert_true(
+  to_regprocedure('public.apply_billing_provider_event(text,text,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,jsonb)') is not null
+  and not has_function_privilege(
+    'anon',
+    to_regprocedure('public.apply_billing_provider_event(text,text,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,jsonb)'),
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    to_regprocedure('public.apply_billing_provider_event(text,text,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,jsonb)'),
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'service_role',
+    to_regprocedure('public.apply_billing_provider_event(text,text,text,uuid,text,text,text,text,timestamp with time zone,timestamp with time zone,timestamp with time zone,jsonb)'),
+    'EXECUTE'
+  ),
+  'processador de eventos de cobrança está exposto à API pública'
 );
 
 -- O fluxo público atual por token precisa continuar acessível sem login.
