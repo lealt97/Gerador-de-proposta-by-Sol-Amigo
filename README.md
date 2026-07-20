@@ -94,7 +94,7 @@ O workflow `.github/workflows/quality.yml` executa automaticamente na branch `ma
 3. testes automatizados;
 4. build de produção.
 
-Os testes atuais cobrem cálculos solares e financeiros, validação de login, autenticação por senha, recuperação e atualização de senha, decisão do gate MFA, desafio TOTP, elevação para AAL2, criação de fator com nome único, desativação de fatores e tradução dos principais erros de MFA.
+Os testes atuais cobrem cálculos solares e financeiros, validação de login, autenticação por senha, recuperação e atualização de senha, decisão do gate MFA, desafio TOTP, elevação para AAL2, criação de fator com nome único, desativação de fatores, catálogo comercial, limites por plano e tradução dos principais erros de MFA.
 
 ## Railway
 
@@ -142,6 +142,7 @@ src/
   contexts/            autenticação e contexto global
   features/design-pdf/ editor de modelos de proposta
   lib/auth/            fluxos testáveis de login, recuperação e MFA
+  lib/billing/         catálogo comercial e limites dos planos
   lib/calculations/    cálculos solares, financeiros e payback
   lib/pdf/             geração e armazenamento de PDF
   pages/               páginas e fluxos da aplicação
@@ -174,6 +175,9 @@ Consulte também:
 - `docs/DISASTER_RECOVERY_RUNBOOK.md`
 - `docs/MFA_LOST_PHONE_PROCEDURE.md`
 - `docs/ADMIN_ACCOUNT_RECOVERY_PROCESS.md`
+- `docs/PRICING_AND_PLANS.md`
+- `docs/PRICING_MARKET_BENCHMARK_2026-07.md`
+- `docs/PLAN_LIMITS.md`
 - `docs/PROJECT_COMPLETION_CHECKLIST.md`
 
 ## Estado do projeto
