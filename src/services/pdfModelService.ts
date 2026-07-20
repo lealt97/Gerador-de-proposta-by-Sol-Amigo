@@ -1,6 +1,7 @@
 import { PdfTemplatePreset, PdfUserModel, PdfTheme, TransformConfig, PdfPageConfig } from '../types/pdfModels';
 import { supabase } from '../lib/supabase/client';
 import { A4_PRESETS } from './pdfA4Presets';
+import { storageAssetService } from './storageAssetService';
 
 const LOCAL_STORAGE_KEY = 'solamigo_pdf_user_models';
 const LOCAL_MIGRATION_KEY_PREFIX = 'solamigo_pdf_user_models_migrated_';
@@ -310,21 +311,11 @@ export const pdfModelService = {
     return readLocalModels();
   },
 
-  async uploadAsset(file: File, bucket: string): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-    const filePath = `models/${fileName}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  }
+  async uploadAsset(
+    file: File,
+    bucket: 'logos' | 'pdf-assets',
+    userId: string,
+  ): Promise<string> {
+    return storageAssetService.uploadAsset(file, bucket, userId);
+  },
 };
