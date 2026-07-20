@@ -10,6 +10,8 @@ import {
 
 const PAGE_PATH = 'src/pages/Plans.tsx';
 const APP_PATH = 'src/App.tsx';
+const CHECKOUT_PAGE_PATH = 'src/pages/BillingCheckout.tsx';
+const CHECKOUT_SERVICE_PATH = 'src/services/billingService.ts';
 const TEXTURE_STYLE_PATH = 'src/styles/plans-texture.css';
 
 test('página pública consome preços e limites do catálogo comercial único', async () => {
@@ -96,11 +98,20 @@ test('rotas de planos e preços ficam públicas sem interferir nas rotas protegi
   assert.match(app, /<Route path="\/precos" element={<Navigate to="\/planos" replace \/>} \/>/);
 });
 
-test('checkout permanece explicitamente fora desta entrega', async () => {
-  const page = await readFile(PAGE_PATH, 'utf8');
+test('planos pagos apontam para checkout autenticado e server-side', async () => {
+  const [page, app, checkoutPage, checkoutService] = await Promise.all([
+    readFile(PAGE_PATH, 'utf8'),
+    readFile(APP_PATH, 'utf8'),
+    readFile(CHECKOUT_PAGE_PATH, 'utf8'),
+    readFile(CHECKOUT_SERVICE_PATH, 'utf8'),
+  ]);
 
-  assert.match(page, /A contratação ainda será conectada ao checkout seguro/);
-  assert.doesNotMatch(page, /supabase\.functions\.invoke/);
+  assert.match(page, /`\/checkout\?interval=\$\{interval\}`/);
+  assert.match(page, /plano muda apenas depois da confirmação assinada do provedor/);
+  assert.match(app, /<Route path="checkout" element={<BillingCheckout \/>} \/>/);
+  assert.match(checkoutPage, /billingService\.startCheckout\(interval\)/);
+  assert.match(checkoutPage, /window\.location\.assign\(checkout\.checkoutUrl\)/);
+  assert.match(checkoutService, /supabase\.functions\.invoke\('billing-checkout'/);
   assert.doesNotMatch(page, /api\.stripe\.com/);
   assert.doesNotMatch(page, /api\.cakto\.com\.br/);
 });
