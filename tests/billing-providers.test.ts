@@ -138,7 +138,7 @@ test('falhas de configuração e autenticação retornam somente códigos saniti
   assert.doesNotMatch(JSON.stringify(unauthorized), /secret provider detail/);
 });
 
-test('função, banco e documentação preservam os limites da etapa', async () => {
+test('função, banco e documentação preservam o contrato seguro da integração', async () => {
   const [edgeFunction, config, migration, environmentDoc, providerDoc, checklist] = await Promise.all([
     readFile('supabase/functions/billing-provider-readiness/index.ts', 'utf8'),
     readFile('supabase/config.toml', 'utf8'),
@@ -151,12 +151,18 @@ test('função, banco e documentação preservam os limites da etapa', async () 
   assert.match(edgeFunction, /admin\.auth\.getUser\(accessToken\)/);
   assert.match(edgeFunction, /probeBillingProvider/);
   assert.match(config, /\[functions\.billing-provider-readiness\][\s\S]*verify_jwt = true/);
+  assert.match(config, /\[functions\.billing-checkout\][\s\S]*verify_jwt = true/);
+  assert.match(config, /\[functions\.billing-webhook-stripe\][\s\S]*verify_jwt = false/);
+  assert.match(config, /\[functions\.billing-webhook-cakto\][\s\S]*verify_jwt = false/);
   assert.match(migration, /provider in \('cakto', 'stripe'\)/);
   assert.match(migration, /plan_code = 'free'[\s\S]*provider is null/);
-  assert.match(environmentDoc, /CAKTO_CLIENT_SECRET/);
-  assert.match(environmentDoc, /STRIPE_SECRET_KEY/);
+  assert.match(environmentDoc, /CAKTO_WEBHOOK_SECRET/);
+  assert.match(environmentDoc, /STRIPE_WEBHOOK_SECRET/);
   assert.doesNotMatch(environmentDoc, /VITE_(CAKTO|STRIPE)/);
   assert.match(providerDoc, /Uma assinatura paga é controlada por apenas um provedor por vez/);
-  assert.match(providerDoc, /checkout;[\s\S]*webhooks/);
+  assert.match(providerDoc, /## Checkout protegido/);
+  assert.match(providerDoc, /billing-webhook-stripe/);
+  assert.match(providerDoc, /billing-webhook-cakto/);
+  assert.match(providerDoc, /Critérios para liberar pagamentos em produção/);
   assert.match(checklist, /- \[ \] Integrar provedor de pagamentos/);
 });
