@@ -1,0 +1,29 @@
+name: Debug TypeScript
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Capturar erros do TypeScript
+        run: npm run typecheck > typescript-output.txt 2>&1 || true
+      - name: Publicar saída
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-output
+          path: typescript-output.txt
