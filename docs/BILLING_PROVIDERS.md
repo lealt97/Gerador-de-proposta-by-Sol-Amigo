@@ -66,6 +66,8 @@ Variáveis de checkout e webhook:
 - `CAKTO_PRO_ANNUAL_CHECKOUT_URL`;
 - `CAKTO_WEBHOOK_SECRET`.
 
+O endpoint publicado é a Edge Function `billing-webhook-cakto`.
+
 O checkout adiciona um rastreamento `sck` no formato `solamigo.<account_id>.<interval>`. O webhook usa esse valor para vincular a confirmação à conta correta, exige segredo e deduplica cada evento por identificador externo ou SHA-256 do corpo recebido.
 
 Eventos tratados:
