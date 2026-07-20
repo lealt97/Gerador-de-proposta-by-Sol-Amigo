@@ -271,3 +271,32 @@ select pg_temp.assert_true(
 
 select 'database backup restore validation passed' as result;
 SQL
+
+printf '6. Limpando a homologação\n'
+psql_cmd -f supabase/tests/database_backup_cleanup.sql \
+  2>&1 | tee "${REPORT_DIR}/fixture-final-cleanup.log"
+
+snapshot | tee "${REPORT_DIR}/fingerprint-final-cleanup.txt"
+awk -F '|' '
+  NF != 3 { bad = 1 }
+  $2 != 0 { bad = 1 }
+  END { exit bad }
+' "${REPORT_DIR}/fingerprint-final-cleanup.txt"
+
+docker exec "${DB_CONTAINER}" rm -f \
+  "${CONTAINER_BACKUP_FILE}" "${AUTH_LIST}" "${PUBLIC_LIST}" "${STORAGE_LIST}"
+trap - EXIT
+
+cat > "${REPORT_DIR}/summary.txt" <<EOF
+result=passed
+backup_format=pg_dump_custom_data_only
+backup_size_bytes=$(stat -c '%s' "${BACKUP_FILE}")
+backup_sha256=$(sha256sum "${BACKUP_FILE}" | awk '{print $1}')
+fixture_tables=$(wc -l < "${BEFORE_FILE}" | tr -d ' ')
+storage_scope=complete_database_metadata
+postgres_tools_source=supabase_database_container
+restore_connections=supabase_auth_admin,postgres,supabase_storage_admin
+triggers=active
+EOF
+
+cat "${REPORT_DIR}/summary.txt"
