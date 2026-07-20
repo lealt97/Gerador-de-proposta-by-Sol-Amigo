@@ -91,7 +91,7 @@ function BrandMark() {
   );
 }
 
-function PlanCard({ plan, destination }: { plan: Plan; destination: string }) {
+function PlanCard({ plan, destination }: { plan: Plan; destination: string; key?: string }) {
   return (
     <article
       id={plan.id}
