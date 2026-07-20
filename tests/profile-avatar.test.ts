@@ -22,12 +22,16 @@ test('perfil e migration possuem avatar_url', async () => {
 
 test('upload aceita somente imagens seguras e limita a dois megabytes', async () => {
   const service = await readFile(SERVICE_PATH, 'utf8');
+  const avatarTypesStart = service.indexOf('const PROFILE_AVATAR_TYPES');
+  const avatarTypesEnd = service.indexOf(']);', avatarTypesStart);
+  const avatarTypes = service.slice(avatarTypesStart, avatarTypesEnd + 3);
 
+  assert.ok(avatarTypesStart >= 0 && avatarTypesEnd > avatarTypesStart);
   assert.match(service, /PROFILE_AVATAR_MAX_BYTES = 2 \* 1024 \* 1024/);
-  assert.match(service, /'image\/jpeg'/);
-  assert.match(service, /'image\/png'/);
-  assert.match(service, /'image\/webp'/);
-  assert.doesNotMatch(service, /PROFILE_AVATAR_TYPES[\s\S]*image\/svg\+xml/);
+  assert.match(avatarTypes, /'image\/jpeg'/);
+  assert.match(avatarTypes, /'image\/png'/);
+  assert.match(avatarTypes, /'image\/webp'/);
+  assert.doesNotMatch(avatarTypes, /image\/svg\+xml/);
   assert.match(service, /`\$\{userId\}\/avatars\/profile-\$\{Date\.now\(\)\}/);
   assert.match(service, /path\.startsWith\(`\$\{userId\}\/avatars\/`\)/);
 });
