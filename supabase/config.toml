@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.billing-webhook-cakto]
 verify_jwt = false
+
+[functions.application-monitor]
+verify_jwt = true
