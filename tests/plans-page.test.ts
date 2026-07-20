@@ -38,7 +38,7 @@ test('comparação foca benefícios e não comercializa quantidade de usuários'
   assert.match(page, /PDF sem marca SolAmigo/);
 });
 
-test('identidade visual usa fundo do login, textura de 8px centralizada e cores SolAmigo', async () => {
+test('identidade visual usa fundo do login, textura de 6px centralizada e opacidade 0.5', async () => {
   const [page, app, textureStyle] = await Promise.all([
     readFile(PAGE_PATH, 'utf8'),
     readFile(APP_PATH, 'utf8'),
@@ -54,9 +54,9 @@ test('identidade visual usa fundo do login, textura de 8px centralizada e cores 
 
   assert.match(app, /import "\.\/styles\/plans-texture\.css";/);
   assert.match(textureStyle, /\[data-testid="plans-texture"\]/);
-  assert.match(textureStyle, /opacity: 1 !important/);
+  assert.match(textureStyle, /opacity: 0\.5 !important/);
   assert.match(textureStyle, /background-repeat: repeat !important/);
-  assert.match(textureStyle, /background-size: 8px 8px !important/);
+  assert.match(textureStyle, /background-size: 6px 6px !important/);
   assert.match(textureStyle, /background-position: center center !important/);
 
   const dataUriMatch = textureStyle.match(/base64,([A-Za-z0-9+/=]+)"\)/);
