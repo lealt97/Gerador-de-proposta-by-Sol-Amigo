@@ -1,0 +1,74 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+import {
+  BILLING_CURRENCY,
+  COMMERCIAL_PLAN_CATALOG,
+  FREE_PLAN,
+  PRO_ANNUAL,
+  PRO_ANNUAL_DISCOUNT_PERCENT,
+  PRO_ANNUAL_EQUIVALENT_MONTHLY_CENTS,
+  PRO_ANNUAL_SAVINGS_CENTS,
+  PRO_MONTHLY,
+} from '../src/lib/billing/planCatalog';
+
+const PRICING_DOC_PATH = 'docs/PRICING_AND_PLANS.md';
+const CHECKLIST_PATH = 'docs/PROJECT_COMPLETION_CHECKLIST.md';
+const README_PATH = 'README.md';
+
+test('catálogo usa BRL, centavos inteiros e apenas os planos free e pro', () => {
+  assert.equal(BILLING_CURRENCY, 'BRL');
+  assert.deepEqual(Object.keys(COMMERCIAL_PLAN_CATALOG), ['free', 'pro']);
+
+  for (const price of [FREE_PLAN.priceCents, PRO_MONTHLY.priceCents, PRO_ANNUAL.priceCents]) {
+    assert.equal(Number.isInteger(price), true);
+    assert.ok(price >= 0);
+  }
+});
+
+test('plano gratuito custa zero e não exige método de pagamento', () => {
+  assert.equal(FREE_PLAN.code, 'free');
+  assert.equal(FREE_PLAN.priceCents, 0);
+  assert.equal(FREE_PLAN.requiresPaymentMethod, false);
+});
+
+test('Pro mensal e anual são o mesmo produto com intervalos diferentes', () => {
+  assert.equal(PRO_MONTHLY.planCode, 'pro');
+  assert.equal(PRO_ANNUAL.planCode, 'pro');
+  assert.equal(PRO_MONTHLY.billingInterval, 'month');
+  assert.equal(PRO_ANNUAL.billingInterval, 'year');
+  assert.equal(PRO_MONTHLY.priceCents, 7_990);
+  assert.equal(PRO_ANNUAL.priceCents, 79_900);
+  assert.equal(PRO_ANNUAL.prepaid, true);
+});
+
+test('anual equivale a dois meses grátis e informa economia corretamente', () => {
+  assert.equal(PRO_ANNUAL_SAVINGS_CENTS, 15_980);
+  assert.equal(PRO_ANNUAL_EQUIVALENT_MONTHLY_CENTS, 6_658);
+  assert.equal(PRO_ANNUAL_DISCOUNT_PERCENT, 16.7);
+  assert.equal(PRO_ANNUAL.priceCents, PRO_MONTHLY.priceCents * 10);
+});
+
+test('documentação separa definição comercial, limites e autorização no servidor', async () => {
+  const pricing = await readFile(PRICING_DOC_PATH, 'utf8');
+
+  assert.match(pricing, /R\$ 0,00/);
+  assert.match(pricing, /R\$ 79,90 por mês/);
+  assert.match(pricing, /R\$ 799,00 por ano/);
+  assert.match(pricing, /R\$ 159,80/);
+  assert.match(pricing, /16,7%/);
+  assert.match(pricing, /limites quantitativos[\s\S]*próximo item do checklist/i);
+  assert.match(pricing, /Nenhum bloqueio de recurso pode depender somente do frontend/);
+  assert.match(pricing, /Nunca deve confiar em preço enviado pelo navegador/);
+});
+
+test('README e checklist registram a definição concluída', async () => {
+  const [readme, checklist] = await Promise.all([
+    readFile(README_PATH, 'utf8'),
+    readFile(CHECKLIST_PATH, 'utf8'),
+  ]);
+
+  assert.match(readme, /docs\/PRICING_AND_PLANS\.md/);
+  assert.match(checklist, /- \[x\] Definir plano gratuito, mensal e anual/);
+  assert.match(checklist, /Evidência da definição dos planos:/);
+});
