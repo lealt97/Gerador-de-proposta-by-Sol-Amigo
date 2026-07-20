@@ -1,4 +1,4 @@
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '../../../components/ui/Button';
@@ -7,8 +7,8 @@ import { Label } from '../../../components/ui/Label';
 import { Select } from '../../../components/ui/Select';
 import { RoofLayoutEditor } from '../../../components/roof/RoofLayoutEditor';
 import { useAuth } from '../../../contexts/AuthContext';
-import { supabase } from '../../../lib/supabase/client';
 import { ProposalFormValues } from '../../../lib/validations/proposal.schema';
+import { storageAssetService } from '../../../services/storageAssetService';
 import { EMPTY_ROOF_LAYOUT, RoofLayoutData } from '../../../types/roofLayout';
 
 const toNumber = (value: unknown) => {
@@ -24,6 +24,7 @@ export function StepInstallation() {
   const { user } = useAuth();
   const { register, watch, setValue, formState: { errors } } = useFormContext<ProposalFormValues>();
   const [isUploading, setIsUploading] = useState(false);
+  const [roofImagePreviewUrl, setRoofImagePreviewUrl] = useState('');
 
   const roofImageUrl = watch('roof_image_url') || '';
   const moduleWidthM = toNumber(watch('module_width_m')) || 1.13;
@@ -33,6 +34,30 @@ export function StepInstallation() {
   const occupiedArea = (roofLayout.modules?.length || 0) * moduleArea;
   const roofArea = toNumber(watch('roof_area_m2'));
   const hasAreaWarning = occupiedArea > roofArea && roofArea > 0;
+
+  useEffect(() => {
+    let active = true;
+
+    async function resolveRoofImage() {
+      if (!roofImageUrl) {
+        setRoofImagePreviewUrl('');
+        return;
+      }
+
+      try {
+        const resolved = await storageAssetService.resolveAssetUrl(roofImageUrl, 900);
+        if (active) setRoofImagePreviewUrl(resolved || '');
+      } catch (error) {
+        console.error('Erro ao autorizar foto privada do telhado:', error);
+        if (active) setRoofImagePreviewUrl('');
+      }
+    }
+
+    resolveRoofImage();
+    return () => {
+      active = false;
+    };
+  }, [roofImageUrl]);
 
   const areaStatus = useMemo(() => {
     if (!roofArea || !occupiedArea) return 'Informe a área e posicione os módulos para comparar ocupação.';
@@ -51,19 +76,9 @@ export function StepInstallation() {
 
     try {
       setIsUploading(true);
-      const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '-');
-      const filePath = `${user.id}/roof-photos/${Date.now()}-${safeName}`;
-
-      const { error } = await supabase.storage.from('proposals').upload(filePath, file, {
-        contentType: file.type || 'image/jpeg',
-        upsert: true,
-      });
-
-      if (error) throw error;
-
-      const { data } = supabase.storage.from('proposals').getPublicUrl(filePath);
-      setValue('roof_image_url', data.publicUrl, { shouldDirty: true, shouldValidate: true });
-      toast.success('Foto do telhado enviada.');
+      const privateReference = await storageAssetService.uploadRoofImage(file, user.id);
+      setValue('roof_image_url', privateReference, { shouldDirty: true, shouldValidate: true });
+      toast.success('Foto do telhado enviada com acesso privado.');
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Erro ao enviar a foto do telhado.');
@@ -175,7 +190,7 @@ export function StepInstallation() {
               </div>
               {roofImageUrl && (
                 <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-300">
-                  Foto ativa
+                  Foto privada
                 </span>
               )}
             </div>
@@ -183,15 +198,15 @@ export function StepInstallation() {
             <div
               className="mt-4 flex min-h-[170px] items-center justify-center overflow-hidden rounded-xl border border-dashed border-brand-border bg-brand-surface text-center"
               style={{
-                backgroundImage: roofImageUrl ? `linear-gradient(rgba(14,35,55,0.12), rgba(14,35,55,0.12)), url(${roofImageUrl})` : undefined,
+                backgroundImage: roofImagePreviewUrl ? `linear-gradient(rgba(14,35,55,0.12), rgba(14,35,55,0.12)), url(${roofImagePreviewUrl})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
             >
-              {!roofImageUrl && (
+              {!roofImagePreviewUrl && (
                 <div className="px-5 py-8">
-                  <p className="text-sm font-medium text-brand-dark">Nenhuma foto enviada</p>
-                  <p className="mt-1 text-xs text-slate-500">A imagem aparecerá aqui e no editor abaixo.</p>
+                  <p className="text-sm font-medium text-brand-dark">Nenhuma foto disponível</p>
+                  <p className="mt-1 text-xs text-slate-500">A imagem aparecerá aqui e no editor após a autorização temporária.</p>
                 </div>
               )}
             </div>
@@ -200,7 +215,7 @@ export function StepInstallation() {
               <input
                 id="roof-photo-upload"
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={handleRoofPhotoUpload}
                 disabled={isUploading}
                 className="sr-only"
@@ -219,13 +234,13 @@ export function StepInstallation() {
             </div>
 
             <div className="mt-4 space-y-2">
-              <Label>URL da foto do telhado</Label>
+              <Label>Referência da foto do telhado</Label>
               <Input
                 {...register('roof_image_url')}
-                placeholder="Cole uma URL pública ou envie pelo botão acima"
+                placeholder="Envie uma foto ou informe uma URL HTTPS confiável"
                 error={errors.roof_image_url?.message}
               />
-              <p className="text-xs text-slate-500">A imagem será usada como fundo da planimetria e também será exibida no PDF.</p>
+              <p className="text-xs text-slate-500">Uploads ficam privados; o sistema cria acesso temporário apenas para edição e geração do PDF.</p>
             </div>
           </aside>
         </div>
@@ -250,7 +265,7 @@ export function StepInstallation() {
         <div className="p-5">
           <RoofLayoutEditor
             value={roofLayout}
-            roofImageUrl={roofImageUrl}
+            roofImageUrl={roofImagePreviewUrl}
             moduleWidthM={moduleWidthM}
             moduleHeightM={moduleHeightM}
             onChange={(layout) => setValue('roof_layout_json', layout, { shouldDirty: true, shouldValidate: true })}
