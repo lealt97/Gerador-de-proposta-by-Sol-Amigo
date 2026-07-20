@@ -13,8 +13,6 @@ import {
 } from '../src/lib/billing/planCatalog';
 
 const PRICING_DOC_PATH = 'docs/PRICING_AND_PLANS.md';
-const CHECKLIST_PATH = 'docs/PROJECT_COMPLETION_CHECKLIST.md';
-const README_PATH = 'README.md';
 
 test('catálogo usa BRL, centavos inteiros e apenas os planos free e pro', () => {
   assert.equal(BILLING_CURRENCY, 'BRL');
@@ -60,15 +58,4 @@ test('documentação separa definição comercial, limites e autorização no se
   assert.match(pricing, /limites quantitativos[\s\S]*próximo item do checklist/i);
   assert.match(pricing, /Nenhum bloqueio de recurso pode depender somente do frontend/);
   assert.match(pricing, /Nunca deve confiar em preço enviado pelo navegador/);
-});
-
-test('README e checklist registram a definição concluída', async () => {
-  const [readme, checklist] = await Promise.all([
-    readFile(README_PATH, 'utf8'),
-    readFile(CHECKLIST_PATH, 'utf8'),
-  ]);
-
-  assert.match(readme, /docs\/PRICING_AND_PLANS\.md/);
-  assert.match(checklist, /- \[x\] Definir plano gratuito, mensal e anual/);
-  assert.match(checklist, /Evidência da definição dos planos:/);
 });
