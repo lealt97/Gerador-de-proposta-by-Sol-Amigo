@@ -35,14 +35,14 @@ test('Pro mensal e anual são o mesmo produto com intervalos diferentes', () => 
   assert.equal(PRO_ANNUAL.planCode, 'pro');
   assert.equal(PRO_MONTHLY.billingInterval, 'month');
   assert.equal(PRO_ANNUAL.billingInterval, 'year');
-  assert.equal(PRO_MONTHLY.priceCents, 7_990);
-  assert.equal(PRO_ANNUAL.priceCents, 79_900);
+  assert.equal(PRO_MONTHLY.priceCents, 10_000);
+  assert.equal(PRO_ANNUAL.priceCents, 100_000);
   assert.equal(PRO_ANNUAL.prepaid, true);
 });
 
 test('anual equivale a dois meses grátis e informa economia corretamente', () => {
-  assert.equal(PRO_ANNUAL_SAVINGS_CENTS, 15_980);
-  assert.equal(PRO_ANNUAL_EQUIVALENT_MONTHLY_CENTS, 6_658);
+  assert.equal(PRO_ANNUAL_SAVINGS_CENTS, 20_000);
+  assert.equal(PRO_ANNUAL_EQUIVALENT_MONTHLY_CENTS, 8_333);
   assert.equal(PRO_ANNUAL_DISCOUNT_PERCENT, 16.7);
   assert.equal(PRO_ANNUAL.priceCents, PRO_MONTHLY.priceCents * 10);
 });
@@ -51,9 +51,9 @@ test('documentação separa definição comercial, limites e autorização no se
   const pricing = await readFile(PRICING_DOC_PATH, 'utf8');
 
   assert.match(pricing, /R\$ 0,00/);
-  assert.match(pricing, /R\$ 79,90 por mês/);
-  assert.match(pricing, /R\$ 799,00 por ano/);
-  assert.match(pricing, /R\$ 159,80/);
+  assert.match(pricing, /R\$ 100,00 por mês/);
+  assert.match(pricing, /R\$ 1\.000,00 por ano/);
+  assert.match(pricing, /R\$ 200,00/);
   assert.match(pricing, /16,7%/);
   assert.match(pricing, /limites quantitativos[\s\S]*próximo item do checklist/i);
   assert.match(pricing, /Nenhum bloqueio de recurso pode depender somente do frontend/);
