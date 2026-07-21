@@ -72,14 +72,15 @@ select pg_temp.assert_true(
         'solar_system_calculations', 'solar_kits',
         'pdf_templates', 'pdf_user_models', 'proposal_events',
         'subscriptions', 'billing_events', 'account_usage',
-        'billing_checkout_sessions'
+        'billing_checkout_sessions', 'account_legal_acceptances',
+        'beta_feedback'
       )
       and concat_ws(' ', p.qual, p.with_check) not ilike '%auth.uid()%'
   ),
   'há política privada sem vínculo com auth.uid()'
 );
 
--- Perfil não pode ser excluído diretamente; exclusão de conta passa pela RPC autenticada.
+-- Perfil não pode ser excluído diretamente; exclusão completa passa pela Edge Function.
 select pg_temp.assert_true(
   exists (
     select 1 from pg_policies
@@ -117,10 +118,13 @@ select pg_temp.assert_true(
   and not exists (
     select 1 from pg_policies
     where schemaname = 'public'
-      and tablename in ('mfa_security_events', 'billing_events', 'application_events')
+      and tablename in (
+        'mfa_security_events', 'billing_events', 'application_events',
+        'admin_audit_logs', 'account_legal_acceptances'
+      )
       and cmd in ('INSERT','UPDATE','DELETE')
   ),
-  'uma tabela de eventos deixou de ser append-only para a API'
+  'uma tabela de eventos ou aceites deixou de ser append-only para a API'
 );
 
 -- Catálogos globais são somente leitura pela API.
@@ -128,7 +132,10 @@ select pg_temp.assert_true(
   not exists (
     select 1 from pg_policies
     where schemaname = 'public'
-      and tablename in ('pdf_cover_templates', 'pdf_template_presets', 'billing_plans')
+      and tablename in (
+        'pdf_cover_templates', 'pdf_template_presets', 'billing_plans',
+        'legal_document_versions'
+      )
       and cmd <> 'SELECT'
   ),
   'catálogo global possui política de escrita'
@@ -145,14 +152,17 @@ select pg_temp.assert_true(
   'proposal_sequences possui acesso direto pela API'
 );
 
--- Tabelas privadas de cobrança permitem somente leitura do próprio registro.
+-- Tabelas privadas de cobrança, administração e monitoramento não aceitam escrita direta.
 select pg_temp.assert_true(
   not has_table_privilege('authenticated', 'public.subscriptions', 'INSERT,UPDATE,DELETE')
   and not has_table_privilege('authenticated', 'public.billing_events', 'INSERT,UPDATE,DELETE')
   and not has_table_privilege('authenticated', 'public.account_usage', 'INSERT,UPDATE,DELETE')
   and not has_table_privilege('authenticated', 'public.billing_checkout_sessions', 'INSERT,UPDATE,DELETE')
-  and not has_table_privilege('authenticated', 'public.application_events', 'SELECT,INSERT,UPDATE,DELETE'),
-  'uma tabela privada de cobrança ou monitoramento possui escrita direta pela API'
+  and not has_table_privilege('authenticated', 'public.application_events', 'SELECT,INSERT,UPDATE,DELETE')
+  and not has_table_privilege('authenticated', 'public.platform_admins', 'SELECT,INSERT,UPDATE,DELETE')
+  and not has_table_privilege('authenticated', 'public.admin_audit_logs', 'SELECT,INSERT,UPDATE,DELETE')
+  and not has_table_privilege('authenticated', 'public.account_legal_acceptances', 'INSERT,UPDATE,DELETE'),
+  'uma tabela privada possui acesso direto indevido pela API'
 );
 
 -- Toda função SECURITY DEFINER deve fixar search_path.
@@ -172,7 +182,7 @@ select pg_temp.assert_true(
   'há função SECURITY DEFINER com search_path mutável'
 );
 
--- Funções de gatilho existentes não devem ser executáveis diretamente pela API.
+-- Funções internas e de gatilho não devem ser executáveis diretamente pela API.
 with internal(signature) as (
   values
     ('public.handle_new_proposal()'),
@@ -184,7 +194,9 @@ with internal(signature) as (
     ('public.initialize_billing_account(uuid)'),
     ('public.audit_mfa_factor_state_change()'),
     ('public.reserve_proposal_quota()'),
-    ('public.prevent_application_event_mutation()')
+    ('public.prevent_application_event_mutation()'),
+    ('public.record_signup_legal_acceptances()'),
+    ('public.prevent_admin_audit_mutation()')
 ), resolved as (
   select signature, to_regprocedure(signature) as function_oid
   from internal
@@ -201,12 +213,14 @@ select pg_temp.assert_true(
   'função interna pode ser chamada diretamente pela API'
 );
 
--- RPCs autenticadas opcionais são auditadas quando presentes no ambiente.
+-- RPCs autenticadas de leitura ou ação própria têm privilégios explícitos.
 with authenticated_rpc(signature) as (
   values
-    ('public.delete_user_account()'),
     ('public.is_proposal_owner(uuid)'),
-    ('public.get_my_proposal_quota()')
+    ('public.get_my_proposal_quota()'),
+    ('public.get_my_legal_status()'),
+    ('public.accept_current_legal_documents()'),
+    ('public.get_my_onboarding_status()')
 ), resolved as (
   select signature, to_regprocedure(signature) as function_oid
   from authenticated_rpc
@@ -220,7 +234,16 @@ select pg_temp.assert_true(
         or not has_function_privilege('authenticated', function_oid, 'EXECUTE')
       )
   ),
-  'permissões das RPCs autenticadas opcionais estão incorretas'
+  'permissões das RPCs autenticadas estão incorretas'
+);
+
+-- A exclusão legada é exclusiva da service_role; o usuário usa a Edge Function completa.
+select pg_temp.assert_true(
+  to_regprocedure('public.delete_user_account()') is not null
+  and not has_function_privilege('anon', to_regprocedure('public.delete_user_account()'), 'EXECUTE')
+  and not has_function_privilege('authenticated', to_regprocedure('public.delete_user_account()'), 'EXECUTE')
+  and has_function_privilege('service_role', to_regprocedure('public.delete_user_account()'), 'EXECUTE'),
+  'a RPC legada de exclusão continua exposta à API'
 );
 
 -- RPCs internas versionadas têm privilégios explícitos.

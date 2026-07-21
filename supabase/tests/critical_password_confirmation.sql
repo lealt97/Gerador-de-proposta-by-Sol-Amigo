@@ -81,11 +81,11 @@ select pg_temp.assert_true(
     'has_recent_password_confirmation(300)'
     in pg_get_functiondef(to_regprocedure('public.delete_user_account()'))
   ) > 0,
-  'a exclusão de conta não exige a confirmação recente no servidor'
+  'a função legada deixou de preservar a confirmação recente no servidor'
 );
 
 select pg_temp.assert_true(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     to_regprocedure('public.delete_user_account()'),
     'EXECUTE'
@@ -95,12 +95,17 @@ select pg_temp.assert_true(
     to_regprocedure('public.delete_user_account()'),
     'EXECUTE'
   )
+  and has_function_privilege(
+    'service_role',
+    to_regprocedure('public.delete_user_account()'),
+    'EXECUTE'
+  )
   and not has_function_privilege(
     'authenticated',
     to_regprocedure('public.has_recent_password_confirmation(integer)'),
     'EXECUTE'
   ),
-  'as permissões das funções de confirmação estão incorretas'
+  'RPC legada permaneceu executável pela API ou as permissões de confirmação estão incorretas'
 );
 
 rollback;

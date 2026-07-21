@@ -31,9 +31,10 @@ def summarize_log(path: str, succeeded: bool) -> str:
 
     text = Path(path).read_text(encoding='utf-8', errors='replace') if Path(path).exists() else ''
     patterns = (
-        r'error TS\d+:[^\n]+',
+        r'[^\n]*error TS\d+:[^\n]+',
         r'AssertionError(?: \[ERR_ASSERTION\])?:\s*[^\n]+',
         r'The input did not match the regular expression[^\n]*',
+        r'The input was expected (?:not )?to match[^\n]*',
         r'Expected values to be strictly equal:[^\n]*',
         r'Could not resolve[^\n]+',
         r'RollupError[^\n]*',

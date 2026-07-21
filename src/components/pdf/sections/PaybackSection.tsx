@@ -13,7 +13,7 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
   },
   paybackBox: {
-    backgroundColor: '#ecfdf5', // emerald-50
+    backgroundColor: '#ecfdf5',
     padding: 20,
     borderRadius: 8,
     borderLeft: '4px solid #10b981',
@@ -21,14 +21,35 @@ const styles = StyleSheet.create({
   },
   paybackLabel: {
     fontSize: 12,
-    color: '#059669', // emerald-600
+    color: '#059669',
     textTransform: 'uppercase',
     marginBottom: 5,
   },
   paybackValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#065f46', // emerald-800
+    color: '#065f46',
+  },
+  methodologyNote: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 14,
+  },
+  methodologyTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#92400e',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+  },
+  methodologyText: {
+    fontSize: 8,
+    lineHeight: 1.45,
+    color: '#78350f',
   },
   viabilityBox: {
     padding: 14,
@@ -105,7 +126,7 @@ const styles = StyleSheet.create({
   tableCellNegative: {
     fontSize: 10,
     color: '#ef4444',
-  }
+  },
 });
 
 const formatMoney = (val: number | null | undefined) => {
@@ -123,19 +144,24 @@ export const PaybackSection = ({ proposal }: { proposal: Proposal }) => {
   const paybackDecimal = investimento > 0 && economiaAnual > 0 ? investimento / economiaAnual : null;
   const viability = classificarPayback(paybackDecimal);
 
-  // Gerar dados simplificados para tabela
-  // Mostrar anos: 1, 3, 5, payback, 10, 15, 20, 25
   const anosExibicao = [1, 3, 5, Math.ceil(solar.payback_years || 0), 10, 15, 20, 25]
-    .filter((v, i, a) => a.indexOf(v) === i) // unique
-    .sort((a, b) => a - b); // sort
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .sort((a, b) => a - b);
 
   return (
     <View>
       <Text style={styles.sectionTitle}>Retorno Financeiro</Text>
-      
+
       <View style={styles.paybackBox}>
         <Text style={styles.paybackLabel}>Tempo de Retorno (Payback Simples)</Text>
         <Text style={styles.paybackValue}>{solar.payback_formatted}</Text>
+      </View>
+
+      <View style={styles.methodologyNote}>
+        <Text style={styles.methodologyTitle}>Importante — estimativa simplificada</Text>
+        <Text style={styles.methodologyText}>
+          O payback simples divide o investimento pela economia anual projetada. Esta estimativa não considera inflação energética, degradação dos módulos, manutenção, indisponibilidade, financiamento, impostos, custo de capital, reajustes tarifários ou mudanças regulatórias. Os resultados dependem dos dados informados e não constituem garantia de geração, economia ou retorno financeiro.
+        </Text>
       </View>
 
       <View style={[styles.viabilityBox, { backgroundColor: viability.backgroundColor, borderColor: viability.borderColor }]}>
@@ -155,9 +181,9 @@ export const PaybackSection = ({ proposal }: { proposal: Proposal }) => {
           <View style={styles.tableColHeader}><Text style={styles.tableCellHeader}>Saldo Líquido</Text></View>
         </View>
 
-        {anosExibicao.map(ano => {
+        {anosExibicao.map((ano) => {
           if (ano <= 0 || ano > 25) return null;
-          
+
           const retorno = economiaAnual * ano;
           const saldo = retorno - investimento;
           const isPayback = saldo >= 0 && (economiaAnual * (ano - 1) - investimento) < 0;

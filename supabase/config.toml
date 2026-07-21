@@ -18,3 +18,12 @@ verify_jwt = false
 
 [functions.application-monitor]
 verify_jwt = true
+
+[functions.account-data-export]
+verify_jwt = true
+
+[functions.account-delete]
+verify_jwt = true
+
+[functions.admin-console]
+verify_jwt = true

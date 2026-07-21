@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, PlusCircle, PenTool, Settings, LogOut, Menu, Package } from "lucide-react";
+import { Database, FileText, LayoutDashboard, LogOut, Menu, Package, PenTool, PlusCircle, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AnimatedNavbarLogo } from "./brand/AnimatedNavbarLogo";
 import { Button } from "./ui/Button";
 import { profileService } from "../services/profileService";
+import { adminService } from "../services/adminService";
 import { Profile } from "../types/profile";
 
 export function Layout() {
@@ -12,6 +13,7 @@ export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [navbarProfile, setNavbarProfile] = useState<Pick<Profile, 'id' | 'name' | 'company_name' | 'seller_name' | 'avatar_url'> | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
@@ -42,6 +44,26 @@ export function Layout() {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    let active = true;
+    if (!user?.id) {
+      setIsAdmin(false);
+      return;
+    }
+
+    void adminService.getMe()
+      .then(() => {
+        if (active) setIsAdmin(true);
+      })
+      .catch(() => {
+        if (active) setIsAdmin(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+
   const displayName = navbarProfile?.seller_name || navbarProfile?.name || user?.user_metadata?.name || 'Usuário';
   const displayCompany = navbarProfile?.company_name || user?.user_metadata?.company_name || 'SolAmigo Pro';
   const avatarUrl = navbarProfile?.avatar_url || user?.user_metadata?.avatar_url || null;
@@ -49,7 +71,7 @@ export function Layout() {
   useEffect(() => {
     setAvatarLoadFailed(false);
   }, [avatarUrl]);
-  
+
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
@@ -57,12 +79,15 @@ export function Layout() {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/primeiros-passos', label: 'Primeiros Passos', icon: Sparkles },
     { path: '/clientes', label: 'Clientes', icon: Users },
     { path: '/propostas', label: 'Propostas', icon: FileText },
     { path: '/propostas/nova', label: 'Nova Proposta', icon: PlusCircle },
     { path: '/kits-solares', label: 'Kits Solares', icon: Package },
     { path: '/design-pdf', label: 'Design PDF', icon: PenTool },
     { path: '/configuracoes', label: 'Configurações da Conta', icon: Settings },
+    { path: '/privacidade-dados', label: 'Privacidade e Dados', icon: Database },
+    ...(isAdmin ? [{ path: '/admin', label: 'Administração', icon: ShieldCheck }] : []),
   ];
 
   const getPageTitle = () => {
@@ -127,7 +152,7 @@ export function Layout() {
                 <p className="text-[10px] text-slate-500 truncate">{displayCompany}</p>
               </div>
             )}
-            <button 
+            <button
               onClick={handleLogout}
               className={`p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors shrink-0 ${!isSidebarExpanded ? "w-full flex justify-center" : ""}`}
               title="Sair"
@@ -140,16 +165,16 @@ export function Layout() {
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-brand-border flex items-center justify-between px-8 bg-brand-surface shrink-0">
           <div className="flex items-center gap-4">
-             <button 
-               onClick={() => setIsSidebarExpanded(!isSidebarExpanded)} 
-               className="p-1.5 -ml-2 text-slate-500 hover:text-brand-dark hover:bg-gray-100 rounded-md transition-colors"
-               title={isSidebarExpanded ? "Recolher menu" : "Expandir menu"}
-             >
-               <Menu className="w-5 h-5" />
-             </button>
-             <h2 className="text-sm font-medium text-brand-dark">{getPageTitle()}</h2>
-             <div className="h-4 w-[1px] bg-gray-100 hidden sm:block"></div>
-             <span className="text-xs text-slate-500 hidden sm:block">SaaS SolAmigo FV</span>
+            <button
+              onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+              className="p-1.5 -ml-2 text-slate-500 hover:text-brand-dark hover:bg-gray-100 rounded-md transition-colors"
+              title={isSidebarExpanded ? "Recolher menu" : "Expandir menu"}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-sm font-medium text-brand-dark">{getPageTitle()}</h2>
+            <div className="h-4 w-[1px] bg-gray-100 hidden sm:block"></div>
+            <span className="text-xs text-slate-500 hidden sm:block">SaaS SolAmigo FV</span>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/propostas/nova">
