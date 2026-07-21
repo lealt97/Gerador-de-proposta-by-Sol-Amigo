@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '../types/profile';
-import { extractActiveLogo } from '../utils/logoHelper';
+import { MAX_ACCOUNT_LOGOS, extractAllLogos } from '../utils/logoHelper';
 import { supabase } from '../lib/supabase/client';
 import { legalService, type LegalStatus } from './legalService';
 import { profileService } from './profileService';
@@ -26,7 +26,7 @@ export type FirstUseSnapshot = {
 
 const hasText = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
-function buildStatus(profile: Profile, legalStatus: LegalStatus, logoSkipped: boolean): FirstUseStatus {
+function buildStatus(profile: Profile, legalStatus: LegalStatus, _logoSkipped = false): FirstUseStatus {
   const companyComplete = Boolean(
     hasText(profile.company_name)
       && (hasText(profile.phone) || hasText(profile.company_email))
@@ -39,7 +39,7 @@ function buildStatus(profile: Profile, legalStatus: LegalStatus, logoSkipped: bo
       && (hasText(profile.seller_phone) || hasText(profile.seller_email)),
   );
 
-  const identityComplete = Boolean(extractActiveLogo(profile.logo_url) || logoSkipped);
+  const identityComplete = extractAllLogos(profile.logo_url).length === MAX_ACCOUNT_LOGOS;
   const legalComplete = legalStatus.complete;
   const flags = [companyComplete, responsibleComplete, identityComplete, legalComplete];
   const completedSteps = flags.filter(Boolean).length;
