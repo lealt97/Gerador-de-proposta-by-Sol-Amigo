@@ -12,7 +12,11 @@ import { legalService, LegalStatus } from '../services/legalService';
 
 const EMPTY_STATUS: LegalStatus = { complete: false, documents: [] };
 
-export function AccountData() {
+interface AccountDataProps {
+  embedded?: boolean;
+}
+
+export function AccountData({ embedded = false }: AccountDataProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [legalStatus, setLegalStatus] = useState<LegalStatus>(EMPTY_STATUS);
@@ -99,15 +103,31 @@ export function AccountData() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <header>
-        <div className="flex items-center gap-2 text-brand-blue">
-          <Shield className="h-5 w-5" />
-          <span className="text-xs font-bold uppercase tracking-[0.18em]">Privacidade e dados</span>
+    <section
+      id="privacidade-dados"
+      aria-label="Privacidade e dados da conta"
+      className={`${embedded ? 'mt-6' : ''} mx-auto flex w-full max-w-5xl flex-col gap-6`}
+    >
+      {!embedded && (
+        <header>
+          <div className="flex items-center gap-2 text-brand-blue">
+            <Shield className="h-5 w-5" />
+            <span className="text-xs font-bold uppercase tracking-[0.18em]">Privacidade e dados</span>
+          </div>
+          <h1 className="mt-2 text-2xl font-bold text-brand-dark">Controle dos dados da sua conta</h1>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Consulte versões legais, exporte uma cópia estruturada e solicite exclusão completa dos dados e arquivos gerenciados.</p>
+        </header>
+      )}
+
+      {embedded && (
+        <div className="border-t border-brand-border pt-6">
+          <div className="flex items-center gap-2 text-brand-blue">
+            <Shield className="h-5 w-5" />
+            <h2 className="text-lg font-bold text-brand-dark">Privacidade e dados</h2>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Documentos legais, exportação e exclusão completa agora fazem parte das configurações de segurança da conta.</p>
         </div>
-        <h1 className="mt-2 text-2xl font-bold text-brand-dark">Controle dos dados da sua conta</h1>
-        <p className="mt-1 text-sm leading-6 text-slate-500">Consulte versões legais, exporte uma cópia estruturada e solicite exclusão completa dos dados e arquivos gerenciados.</p>
-      </header>
+      )}
 
       <Card className="p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -195,6 +215,6 @@ export function AccountData() {
           </div>
         </form>
       </Card>
-    </div>
+    </section>
   );
 }
