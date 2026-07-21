@@ -30,7 +30,7 @@ import { SettingsRoute } from "./pages/SettingsRoute";
 import { SolarKitCatalog } from "./pages/kits/SolarKitCatalog";
 import { Plans } from "./pages/Plans";
 import { BillingCheckout } from "./pages/BillingCheckout";
-import { Onboarding } from "./pages/Onboarding";
+import { FirstUseRoute } from "./pages/FirstUseRoute";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { LegalDocumentPage } from "./pages/legal/LegalDocumentPage";
 
@@ -60,7 +60,7 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route path="/primeiros-passos" element={<Onboarding />} />
+            <Route path="/primeiros-passos" element={<FirstUseRoute />} />
 
             <Route element={<FirstUseGate />}>
               <Route path="/" element={<Layout />}>
