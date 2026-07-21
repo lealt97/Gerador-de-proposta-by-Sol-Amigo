@@ -93,6 +93,17 @@ export const firstUseService = {
     return data.user;
   },
 
+  async invalidateCompletion() {
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        first_use_completed_at: null,
+        first_use_version: FIRST_USE_VERSION,
+      },
+    });
+    if (error) throw error;
+    return data.user;
+  },
+
   async complete(status: FirstUseStatus) {
     if (!status.complete) {
       throw new Error('Conclua todas as etapas obrigatórias antes de acessar a plataforma.');
