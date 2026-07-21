@@ -10,7 +10,6 @@ const LAYOUT = 'src/components/Layout.tsx';
 const WIZARD = 'src/pages/Onboarding.tsx';
 const FIRST_USE_ROUTE = 'src/pages/FirstUseRoute.tsx';
 const SERVICE = 'src/services/firstUseService.ts';
-const PROFILE_SERVICE = 'src/services/profileService.ts';
 
 
 test('wizard fica fora do layout e bloqueia as rotas privadas até a conclusão', async () => {
@@ -64,22 +63,16 @@ test('toda conta sem conclusão registrada deve passar pelo primeiro uso', async
 });
 
 
-test('progresso regressa e o wizard volta quando dados obrigatórios são apagados', async () => {
-  const [gate, service, profileService] = await Promise.all([
-    read(GATE),
-    read(SERVICE),
-    read(PROFILE_SERVICE),
-  ]);
+test('progresso concluído não regride quando dados são alterados ou apagados depois', async () => {
+  const [gate, service] = await Promise.all([read(GATE), read(SERVICE)]);
 
-  assert.match(gate, /firstUseService\.load\(user\)/);
-  assert.match(gate, /!snapshot\.status\.complete/);
-  assert.match(gate, /firstUseService\.invalidateCompletion\(\)/);
-  assert.match(gate, /solamigo:profile-updated/);
-  assert.match(gate, /requiredProfileDataComplete/);
-  assert.doesNotMatch(gate, /useLocation/);
-  assert.match(service, /first_use_completed_at: null/);
-  assert.match(profileService, /notifyProfileUpdated\(updatedProfile\)/);
-  assert.match(profileService, /solamigo:profile-updated/);
+  assert.match(gate, /firstUseService\.requiresFirstUse\(user\)/);
+  assert.doesNotMatch(gate, /firstUseService\.load\(user\)/);
+  assert.doesNotMatch(gate, /invalidateCompletion/);
+  assert.doesNotMatch(gate, /solamigo:profile-updated/);
+  assert.doesNotMatch(gate, /snapshot\.status\.complete/);
+  assert.doesNotMatch(service, /invalidateCompletion/);
+  assert.doesNotMatch(service, /first_use_completed_at: null/);
 });
 
 
