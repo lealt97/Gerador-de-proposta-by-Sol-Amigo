@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Database, FileText, LayoutDashboard, LogOut, Menu, Package, PenTool, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { FileText, LayoutDashboard, LogOut, Menu, Package, PenTool, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AnimatedNavbarLogo } from "./brand/AnimatedNavbarLogo";
 import { profileService } from "../services/profileService";
@@ -84,7 +84,6 @@ export function Layout() {
     { path: '/kits-solares', label: 'Kits Solares', icon: Package },
     { path: '/design-pdf', label: 'Design PDF', icon: PenTool },
     { path: '/configuracoes', label: 'Configurações da Conta', icon: Settings },
-    { path: '/privacidade-dados', label: 'Privacidade e Dados', icon: Database },
     ...(isAdmin ? [{ path: '/admin', label: 'Administração', icon: ShieldCheck }] : []),
   ];
 
