@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loader2, LogOut } from 'lucide-react';
+import { LogoUploadFormatSupport } from '../components/brand/LogoUploadFormatSupport';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { Onboarding } from './Onboarding';
@@ -21,6 +22,7 @@ export function FirstUseRoute() {
 
   return (
     <>
+      <LogoUploadFormatSupport context="first-use" />
       <Onboarding />
       <div className="fixed right-4 top-4 z-[70] sm:right-6 sm:top-6">
         <Button
