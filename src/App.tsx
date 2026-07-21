@@ -60,11 +60,12 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route element={<ProtectedRoute />}>
+            <Route path="/primeiros-passos" element={<Onboarding />} />
+
             <Route element={<FirstUseGate />}>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Home />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="primeiros-passos" element={<Onboarding />} />
                 <Route path="clientes" element={<ClientList />} />
                 <Route path="clientes/novo" element={<ClientForm />} />
                 <Route path="clientes/:id" element={<ClientDetails />} />
