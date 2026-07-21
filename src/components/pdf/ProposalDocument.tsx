@@ -30,7 +30,7 @@ export const ProposalDocument: React.FC<ProposalDocumentProps> = ({ proposal, co
   return (
     <Document>
       <PdfThemeProvider theme={pdfTheme}>
-        <Page size="A4" style={styles.page}>
+        <Page size="A4" style={styles.page} wrap={false}>
           {coverImage ? (
             <>
               <Image src={coverImage} style={styles.coverImage} />
