@@ -1,6 +1,7 @@
 import { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SessionSecurityCard } from '../components/auth/SessionSecurityCard';
+import { LogoUploadFormatSupport } from '../components/brand/LogoUploadFormatSupport';
 import { AccountClosure } from './AccountClosure';
 import { AccountData } from './AccountData';
 import { Configuracoes } from './Configuracoes';
@@ -40,6 +41,7 @@ export function SettingsRoute() {
 
   return (
     <>
+      {activeTab === 'logo' && <LogoUploadFormatSupport context="settings" />}
       <div onClickCapture={handleCapture}>
         <Configuracoes />
       </div>
