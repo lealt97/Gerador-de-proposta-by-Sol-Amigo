@@ -9,6 +9,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "sonner";
 import { ProtectedRoute, PublicRoute } from "./components/auth/RouteGuards";
 import { AdminRoute } from "./components/auth/AdminRoute";
+import { FirstUseGate } from "./components/auth/FirstUseGate";
 import { PlatformThemeBootstrap } from "./components/theme/PlatformThemeBootstrap";
 import "./styles/plans-texture.css";
 
@@ -59,25 +60,27 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="primeiros-passos" element={<Onboarding />} />
-              <Route path="clientes" element={<ClientList />} />
-              <Route path="clientes/novo" element={<ClientForm />} />
-              <Route path="clientes/:id" element={<ClientDetails />} />
-              <Route path="clientes/:id/editar" element={<ClientForm />} />
-              <Route path="propostas" element={<ProposalList />} />
-              <Route path="propostas/nova" element={null} />
-              <Route path="propostas/:id" element={<ProposalDetailsRoute />} />
-              <Route path="propostas/:id/editar" element={null} />
-              <Route path="kits-solares" element={<SolarKitCatalog />} />
-              <Route path="design-pdf" element={<DesignPdf />} />
-              <Route path="checkout" element={<BillingCheckout />} />
-              <Route path="configuracoes" element={<SettingsRoute />} />
-              <Route path="privacidade-dados" element={<Navigate to="/configuracoes?tab=seguranca" replace />} />
-              <Route element={<AdminRoute />}>
-                <Route path="admin" element={<AdminDashboard />} />
+            <Route element={<FirstUseGate />}>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Home />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="primeiros-passos" element={<Onboarding />} />
+                <Route path="clientes" element={<ClientList />} />
+                <Route path="clientes/novo" element={<ClientForm />} />
+                <Route path="clientes/:id" element={<ClientDetails />} />
+                <Route path="clientes/:id/editar" element={<ClientForm />} />
+                <Route path="propostas" element={<ProposalList />} />
+                <Route path="propostas/nova" element={null} />
+                <Route path="propostas/:id" element={<ProposalDetailsRoute />} />
+                <Route path="propostas/:id/editar" element={null} />
+                <Route path="kits-solares" element={<SolarKitCatalog />} />
+                <Route path="design-pdf" element={<DesignPdf />} />
+                <Route path="checkout" element={<BillingCheckout />} />
+                <Route path="configuracoes" element={<SettingsRoute />} />
+                <Route path="privacidade-dados" element={<Navigate to="/configuracoes?tab=seguranca" replace />} />
+                <Route element={<AdminRoute />}>
+                  <Route path="admin" element={<AdminDashboard />} />
+                </Route>
               </Route>
             </Route>
           </Route>
