@@ -47,9 +47,23 @@ test('toda conta sem conclusão registrada deve passar pelo primeiro uso', async
   assert.doesNotMatch(service, /FIRST_USE_RELEASE_AT/);
   assert.match(service, /first_use_completed_at/);
   assert.match(service, /first_use_version/);
-  assert.match(service, /first_use_logo_skipped/);
   assert.match(service, /return !completedAt \|\| completedVersion < FIRST_USE_VERSION/);
   assert.match(service, /status\.complete/);
+});
+
+
+test('etapa 4 de 6 exige exatamente as três logos permitidas pela conta', async () => {
+  const [wizard, service] = await Promise.all([read(WIZARD), read(SERVICE)]);
+
+  assert.match(wizard, /Etapa \{currentStep \+ 1\} de \{STEPS\.length\}/);
+  assert.match(wizard, /Envie as 3 logos da empresa/);
+  assert.match(wizard, /A plataforma aceita no máximo/);
+  assert.match(wizard, /MAX_ACCOUNT_LOGOS/);
+  assert.match(wizard, /logoCount === MAX_ACCOUNT_LOGOS/);
+  assert.match(wizard, /Faltam \$\{MAX_ACCOUNT_LOGOS - logoCount\}/);
+  assert.match(wizard, /Continuar com \$\{MAX_ACCOUNT_LOGOS\} logos/);
+  assert.doesNotMatch(wizard, /Continuar sem logo/);
+  assert.match(service, /extractAllLogos\(profile\.logo_url\)\.length === MAX_ACCOUNT_LOGOS/);
 });
 
 
