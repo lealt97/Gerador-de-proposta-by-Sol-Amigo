@@ -1,5 +1,6 @@
 import { MouseEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { SessionSecurityCard } from '../components/auth/SessionSecurityCard';
 import { AccountClosure } from './AccountClosure';
 import { AccountData } from './AccountData';
 import { Configuracoes } from './Configuracoes';
@@ -42,7 +43,12 @@ export function SettingsRoute() {
       <div onClickCapture={handleCapture}>
         <Configuracoes />
       </div>
-      {activeTab === 'seguranca' && <AccountData embedded />}
+      {activeTab === 'seguranca' && (
+        <div className="mx-auto mt-6 flex w-full max-w-5xl flex-col gap-6">
+          <SessionSecurityCard />
+          <AccountData embedded />
+        </div>
+      )}
     </>
   );
 }
