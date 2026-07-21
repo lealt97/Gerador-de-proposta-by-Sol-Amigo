@@ -1,5 +1,6 @@
 import { MouseEvent } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { AccountClosure } from './AccountClosure';
 import { AccountData } from './AccountData';
 import { Configuracoes } from './Configuracoes';
 
@@ -10,7 +11,7 @@ const SETTINGS_TAB_BY_LABEL: Record<string, string> = {
   'Customização da Conta': 'customizacao',
   'Preferências Comerciais': 'preferencias',
   Segurança: 'seguranca',
-  'Encerramento da Conta': 'seguranca',
+  'Encerramento da Conta': 'encerramento',
 };
 
 export function SettingsRoute() {
@@ -19,7 +20,7 @@ export function SettingsRoute() {
   const activeTab = searchParams.get('tab') || 'empresa';
 
   if (activeTab === 'encerramento') {
-    return <Navigate to="/configuracoes?tab=seguranca#privacidade-dados" replace />;
+    return <AccountClosure />;
   }
 
   const handleCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -33,9 +34,7 @@ export function SettingsRoute() {
 
     event.preventDefault();
     event.stopPropagation();
-
-    const hash = label === 'Encerramento da Conta' ? '#privacidade-dados' : '';
-    navigate(`/configuracoes?tab=${nextTab}${hash}`);
+    navigate(`/configuracoes?tab=${nextTab}`);
   };
 
   return (
