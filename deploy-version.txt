@@ -1,0 +1,10 @@
+Sol-Amigo-PRO Railway redeploy
+
+Commit funcional de referência: deac272870beb2b89257044b17a00fb94522657e
+Estado esperado:
+- /propostas/nova vazio
+- /propostas/:id/editar vazio
+- PDF somente com a capa
+- demais módulos preservados
+
+Trigger criado em 2026-07-21.
