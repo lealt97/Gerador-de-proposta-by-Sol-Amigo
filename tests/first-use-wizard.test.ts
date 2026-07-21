@@ -6,18 +6,21 @@ const read = (path: string) => readFile(path, 'utf8');
 
 const APP = 'src/App.tsx';
 const GATE = 'src/components/auth/FirstUseGate.tsx';
+const LAYOUT = 'src/components/Layout.tsx';
 const WIZARD = 'src/pages/Onboarding.tsx';
 const SERVICE = 'src/services/firstUseService.ts';
 
 
-test('rotas privadas exigem a conclusão do primeiro uso', async () => {
-  const [app, gate] = await Promise.all([read(APP), read(GATE)]);
+test('wizard fica fora do layout e bloqueia as rotas privadas até a conclusão', async () => {
+  const [app, gate, layout] = await Promise.all([read(APP), read(GATE), read(LAYOUT)]);
 
-  assert.match(app, /<Route element={<FirstUseGate \/>}>/);
-  assert.match(app, /path="primeiros-passos" element={<Onboarding \/>}/);
+  assert.match(app, /<Route path="\/primeiros-passos" element={<Onboarding \/>} \/>/);
+  assert.match(app, /<Route path="\/primeiros-passos" element={<Onboarding \/>} \/>[\s\S]*<Route element={<FirstUseGate \/>}>/);
   assert.match(gate, /firstUseService\.requiresFirstUse\(user\)/);
-  assert.match(gate, /<Navigate to="\/primeiros-passos"/);
-  assert.match(gate, /location\.pathname === '\/primeiros-passos'/);
+  assert.match(gate, /<Navigate to="\/primeiros-passos" replace \/>/);
+  assert.doesNotMatch(gate, /useLocation/);
+  assert.doesNotMatch(layout, /\/primeiros-passos/);
+  assert.doesNotMatch(layout, /Primeiros Passos/);
 });
 
 
@@ -35,14 +38,14 @@ test('wizard salva dados nas áreas reais da conta sem estado paralelo', async (
 });
 
 
-test('conclusão usa metadados de autenticação e preserva contas legadas', async () => {
+test('toda conta sem conclusão registrada deve passar pelo primeiro uso', async () => {
   const service = await read(SERVICE);
 
-  assert.match(service, /FIRST_USE_RELEASE_AT/);
+  assert.doesNotMatch(service, /FIRST_USE_RELEASE_AT/);
   assert.match(service, /first_use_completed_at/);
   assert.match(service, /first_use_version/);
   assert.match(service, /first_use_logo_skipped/);
-  assert.match(service, /createdAt >= releaseAt/);
+  assert.match(service, /return !completedAt \|\| completedVersion < FIRST_USE_VERSION/);
   assert.match(service, /status\.complete/);
 });
 
@@ -55,7 +58,8 @@ test('wizard contém as etapas essenciais e libera o dashboard somente no final'
   assert.match(wizard, /Responsável/);
   assert.match(wizard, /Identidade visual/);
   assert.match(wizard, /Segurança e termos/);
-  assert.match(wizard, /Entrar na plataforma/);
+  assert.match(wizard, /Concluir/);
   assert.match(wizard, /firstUseService\.complete\(finalStatus\)/);
   assert.match(wizard, /window\.location\.assign\('\/dashboard'\)/);
+  assert.match(wizard, /fixed inset-0 z-50 overflow-y-auto bg-brand-gray/);
 });
