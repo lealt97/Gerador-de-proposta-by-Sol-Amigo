@@ -9,3 +9,10 @@ blob-report/
 *.log
 .env*
 !.env.example
+
+# Arquivos temporários de correção e diagnóstico na raiz
+/fix_*.py
+/patch_*.py
+/check_*.cjs
+/get_*.cjs
+/test-*.cjs
