@@ -3,7 +3,24 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
-const railwayHost = 'gerador-de-proposta-by-sol-amigo-production-9aa9.up.railway.app';
+const defaultRailwayHost = 'gerador-de-proposta-by-sol-amigo-production-9aa9.up.railway.app';
+
+function getAllowedPreviewHosts() {
+  const configuredHosts = [
+    process.env.VITE_ALLOWED_HOSTS,
+    process.env.RAILWAY_PUBLIC_DOMAIN,
+    defaultRailwayHost,
+  ];
+
+  return Array.from(
+    new Set(
+      configuredHosts
+        .flatMap((value) => value?.split(',') ?? [])
+        .map((host) => host.trim())
+        .filter(Boolean),
+    ),
+  );
+}
 
 export default defineConfig(() => {
   return {
@@ -21,7 +38,7 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
     preview: {
-      allowedHosts: [railwayHost],
+      allowedHosts: getAllowedPreviewHosts(),
     },
   };
 });
