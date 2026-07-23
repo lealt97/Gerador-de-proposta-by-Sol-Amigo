@@ -8,8 +8,9 @@ import {
   Loader2,
   MapPin,
   PackageCheck,
+  UserRound,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -21,7 +22,9 @@ import {
   type ConnectionType,
   type ProfessionalSizingResult,
 } from '../../lib/calculations/professionalSizing';
+import { clientService } from '../../services/clientService';
 import { solarKitService } from '../../services/solarKitService';
+import type { Client } from '../../types/client';
 import type { SolarKit } from '../../types/solarKit';
 
 const MONTHS = [
@@ -30,6 +33,7 @@ const MONTHS = [
 ] as const;
 
 const STEPS = [
+  { id: 'client', title: 'Cliente' },
   { id: 'consumption', title: 'Consumo' },
   { id: 'irradiation', title: 'Irradiação e potência' },
   { id: 'kit', title: 'Kit e resultado' },
@@ -90,7 +94,14 @@ function Field({
 
 export function ProfessionalSizingCalculator() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clientIdFromQuery = searchParams.get('clienteId') || '';
+
   const [currentStep, setCurrentStep] = useState(0);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState(clientIdFromQuery);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [clientsError, setClientsError] = useState<string | null>(null);
   const [monthlyConsumption, setMonthlyConsumption] = useState<string[]>(
     () => Array.from({ length: 12 }, () => ''),
   );
@@ -104,6 +115,22 @@ export function ProfessionalSizingCalculator() {
   const [selectedKitId, setSelectedKitId] = useState('');
   const [isLoadingKits, setIsLoadingKits] = useState(true);
   const [kitsError, setKitsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        setIsLoadingClients(true);
+        setClientsError(null);
+        setClients(await clientService.getClients());
+      } catch (error) {
+        setClientsError(error instanceof Error ? error.message : 'Erro ao carregar os clientes cadastrados.');
+      } finally {
+        setIsLoadingClients(false);
+      }
+    };
+
+    void loadClients();
+  }, []);
 
   useEffect(() => {
     const loadKits = async () => {
@@ -121,6 +148,11 @@ export function ProfessionalSizingCalculator() {
 
     void loadKits();
   }, []);
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.id === selectedClientId) ?? null,
+    [clients, selectedClientId],
+  );
 
   const selectedKit = useMemo(
     () => kits.find((kit) => kit.id === selectedKitId) ?? null,
@@ -199,7 +231,12 @@ export function ProfessionalSizingCalculator() {
   };
 
   const validateStep = () => {
-    if (currentStep === 0) {
+    if (currentStep === 0 && !selectedClient) {
+      toast.error('Selecione um cliente cadastrado.');
+      return false;
+    }
+
+    if (currentStep === 1) {
       if (!allMonthsFilled) {
         toast.error('Informe o consumo dos 12 meses.');
         return false;
@@ -214,7 +251,7 @@ export function ProfessionalSizingCalculator() {
       }
     }
 
-    if (currentStep === 1) {
+    if (currentStep === 2) {
       const parsedLatitude = parseNumber(latitude);
       const parsedLongitude = parseNumber(longitude);
       const parsedHsp = parseNumber(hspDaily);
@@ -242,7 +279,7 @@ export function ProfessionalSizingCalculator() {
       }
     }
 
-    if (currentStep === 2 && !selectedKit) {
+    if (currentStep === 3 && !selectedKit) {
       toast.error('Selecione um kit on-grid cadastrado.');
       return false;
     }
@@ -327,6 +364,79 @@ export function ProfessionalSizingCalculator() {
             {currentStep === 0 && (
               <section className="space-y-6">
                 <div>
+                  <h2 className="text-lg font-bold text-brand-dark">Selecione o cliente</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    A proposta será vinculada a um cliente já cadastrado na sua conta.
+                  </p>
+                </div>
+
+                {isLoadingClients ? (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+                    <Loader2 className="h-5 w-5 animate-spin" /> Carregando clientes...
+                  </div>
+                ) : clientsError ? (
+                  <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <p>{clientsError}</p>
+                  </div>
+                ) : clients.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-brand-border p-8 text-center">
+                    <UserRound className="mx-auto h-9 w-9 text-slate-400" />
+                    <h3 className="mt-3 font-bold text-brand-dark">Nenhum cliente cadastrado</h3>
+                    <p className="mt-1 text-sm text-slate-500">Cadastre um cliente antes de iniciar o dimensionamento.</p>
+                    <Button type="button" className="mt-4" onClick={() => navigate('/clientes/novo')}>Cadastrar cliente</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-end gap-3">
+                      <label className="block flex-1 space-y-2">
+                        <span className="text-sm font-semibold text-brand-dark">Cliente *</span>
+                        <Select value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value)}>
+                          <option value="">Selecione um cliente cadastrado</option>
+                          {clients.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {client.name}{client.document ? ` — ${client.document}` : ''}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                      <Button type="button" variant="outline" onClick={() => navigate('/clientes/novo')}>
+                        Novo cliente
+                      </Button>
+                    </div>
+
+                    {selectedClient && (
+                      <Card className="border-brand-blue/20 bg-brand-blue/5 shadow-none">
+                        <CardContent className="p-5">
+                          <div className="flex items-start gap-4">
+                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-blue text-white">
+                              <UserRound className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-bold uppercase tracking-wider text-brand-blue">Cliente selecionado</p>
+                              <h3 className="mt-1 text-lg font-bold text-brand-dark">{selectedClient.name}</h3>
+                              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                                <ClientDetail label="Documento" value={selectedClient.document || 'Não informado'} />
+                                <ClientDetail label="Telefone" value={selectedClient.phone || 'Não informado'} />
+                                <ClientDetail label="E-mail" value={selectedClient.email || 'Não informado'} />
+                                <ClientDetail
+                                  label="Localidade"
+                                  value={[selectedClient.city, selectedClient.state].filter(Boolean).join(' - ') || 'Não informada'}
+                                />
+                              </dl>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {currentStep === 1 && (
+              <section className="space-y-6">
+                <div>
                   <h2 className="text-lg font-bold text-brand-dark">Levantamento do consumo</h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Transcreva os consumos em kWh das últimas 12 contas de energia.
@@ -375,7 +485,7 @@ export function ProfessionalSizingCalculator() {
               </section>
             )}
 
-            {currentStep === 1 && (
+            {currentStep === 2 && (
               <section className="space-y-6">
                 <div>
                   <h2 className="text-lg font-bold text-brand-dark">Irradiação solar e potência necessária</h2>
@@ -405,7 +515,7 @@ export function ProfessionalSizingCalculator() {
               </section>
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <section className="space-y-6">
                 <div>
                   <h2 className="text-lg font-bold text-brand-dark">Seleção do kit cadastrado</h2>
@@ -531,6 +641,7 @@ export function ProfessionalSizingCalculator() {
 
         <div className="lg:col-span-1 lg:sticky lg:top-6">
           <SizingPreview
+            selectedClient={selectedClient}
             consumptionPreview={consumptionPreview}
             result={result}
             selectedKit={selectedKit}
@@ -543,11 +654,13 @@ export function ProfessionalSizingCalculator() {
 }
 
 function SizingPreview({
+  selectedClient,
   consumptionPreview,
   result,
   selectedKit,
   hspDaily,
 }: {
+  selectedClient: Client | null;
   consumptionPreview: {
     annualConsumptionKwh: number;
     averageMonthlyConsumptionKwh: number;
@@ -572,12 +685,28 @@ function SizingPreview({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!consumptionPreview ? (
-          <div className="rounded-lg border border-dashed border-brand-border p-5 text-center text-sm text-slate-500">
-            Preencha os 12 meses de consumo para iniciar o resumo.
+        {selectedClient ? (
+          <div className="rounded-lg border border-brand-blue/20 bg-brand-blue/5 p-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-blue">Cliente</p>
+            <p className="mt-1 font-bold text-brand-dark">{selectedClient.name}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {[selectedClient.city, selectedClient.state].filter(Boolean).join(' - ') || selectedClient.document || 'Cadastro selecionado'}
+            </p>
           </div>
         ) : (
-          <dl className="space-y-3 text-sm">
+          <div className="rounded-lg border border-dashed border-brand-border p-5 text-center text-sm text-slate-500">
+            Selecione o cliente para iniciar a proposta.
+          </div>
+        )}
+
+        {selectedClient && !consumptionPreview && (
+          <div className="rounded-lg border border-dashed border-brand-border p-5 text-center text-sm text-slate-500">
+            Preencha os 12 meses de consumo para iniciar o resumo técnico.
+          </div>
+        )}
+
+        {consumptionPreview && (
+          <dl className="space-y-3 border-t border-brand-border pt-4 text-sm">
             <PreviewRow label="Média mensal" value={`${number.format(consumptionPreview.averageMonthlyConsumptionKwh)} kWh`} />
             <PreviewRow label="Disponibilidade" value={`${consumptionPreview.availabilityConsumptionKwh} kWh`} />
             <PreviewRow label="Consumo compensável" value={`${number.format(consumptionPreview.compensableMonthlyConsumptionKwh)} kWh`} />
@@ -627,6 +756,15 @@ function Summary({ label, value, highlight = false }: { label: string; value: st
     <div className={`rounded-xl border p-4 ${highlight ? 'border-brand-blue/30 bg-brand-blue/10' : 'border-brand-border bg-brand-gray/40'}`}>
       <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <p className="mt-2 text-xl font-bold text-brand-dark">{value}</p>
+    </div>
+  );
+}
+
+function ClientDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</dt>
+      <dd className="mt-1 break-words font-semibold text-brand-dark">{value}</dd>
     </div>
   );
 }
