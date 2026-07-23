@@ -147,7 +147,7 @@ test('onboarding não depende mais de proposta ou cálculo', async () => {
   assert.ok(app.includes('<Route path="/primeiros-passos" element={<FirstUseRoute />} />'));
 });
 
-test('dimensionamento usa consumo, HSP e kit cadastrado sem reativar mutações antigas', async () => {
+test('dimensionamento começa pelo cliente e usa consumo, HSP e kit cadastrado sem reativar mutações antigas', async () => {
   const [app, service, list, calculator, engine] = await Promise.all([
     read(APP),
     read(PROPOSAL_SERVICE),
@@ -163,6 +163,10 @@ test('dimensionamento usa consumo, HSP e kit cadastrado sem reativar mutações 
   assert.doesNotMatch(service, /updateProposal/);
   assert.doesNotMatch(service, /duplicateProposal/);
   assert.match(list, /Novo dimensionamento/);
+  assert.match(calculator, /clientService\.getClients\(\)/);
+  assert.match(calculator, /Selecione o cliente/);
+  assert.match(calculator, /Selecione um cliente cadastrado/);
+  assert.match(calculator, /searchParams\.get\('clienteId'\)/);
   assert.match(calculator, /solarKitService\.getActiveKits\(\)/);
   assert.match(calculator, /CRESESB\/SunData/);
   assert.match(calculator, /Tipo de ligação/);
@@ -173,22 +177,6 @@ test('dimensionamento usa consumo, HSP e kit cadastrado sem reativar mutações 
   assert.match(engine, /availabilityConsumptionKwh/);
   assert.match(engine, /requiredPowerKwp/);
   assert.match(engine, /selectedKitPowerKwp/);
-});
-
-test('calculadora mantém o modelo visual horizontal do wizard antigo', async () => {
-  const calculator = await read(SIZING_CALCULATOR);
-
-  assert.match(calculator, /Etapa \{currentStep \+ 1\} de \{STEPS\.length\}/);
-  assert.match(calculator, /overflow-x-auto pb-2 scrollbar-none/);
-  assert.match(calculator, /grid grid-cols-1 items-start gap-6 lg:grid-cols-3/);
-  assert.match(calculator, /lg:col-span-2/);
-  assert.match(calculator, /lg:col-span-1 lg:sticky lg:top-6/);
-  assert.match(calculator, /Resumo do dimensionamento/);
-  assert.match(calculator, />\s*Anterior\s*</);
-  assert.match(calculator, />\s*Próximo\s*</);
-  assert.match(calculator, /Concluir dimensionamento/);
-  assert.doesNotMatch(calculator, /lg:grid-cols-\[260px_minmax\(0,1fr\)\]/);
-  assert.match(calculator, /type="text" label="Fonte da irradiação"/);
 });
 
 test('privacidade e exportação ficam em Segurança e exclusão em Encerramento da Conta', async () => {
