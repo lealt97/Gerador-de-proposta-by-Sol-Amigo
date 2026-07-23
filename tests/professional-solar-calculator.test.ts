@@ -45,10 +45,11 @@ test('geração adicional de 10, 20, 30 ou 50 por cento aumenta a meta proporcio
   const thirty = calculateProfessionalSolar(createInput({ generationAdditionalPercent: 30 }));
   const fifty = calculateProfessionalSolar(createInput({ generationAdditionalPercent: 50 }));
 
-  assert.equal(ten.annualTargetGenerationKwh, base.annualCompensableConsumptionKwh * 1.1);
-  assert.equal(twenty.annualTargetGenerationKwh, base.annualCompensableConsumptionKwh * 1.2);
-  assert.equal(thirty.annualTargetGenerationKwh, base.annualCompensableConsumptionKwh * 1.3);
-  assert.equal(fifty.annualTargetGenerationKwh, base.annualCompensableConsumptionKwh * 1.5);
+  assert.equal(base.annualTargetGenerationKwh, 5640);
+  assert.equal(ten.annualTargetGenerationKwh, 6204);
+  assert.equal(twenty.annualTargetGenerationKwh, 6768);
+  assert.equal(thirty.annualTargetGenerationKwh, 7332);
+  assert.equal(fifty.annualTargetGenerationKwh, 8460);
   assert.ok(fifty.moduleCount > base.moduleCount);
   assert.ok(fifty.warnings.some((warning) => warning.code === 'HIGH_ADDITIONAL_GENERATION'));
 });
