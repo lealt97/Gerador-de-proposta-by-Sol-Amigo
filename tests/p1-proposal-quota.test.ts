@@ -36,7 +36,7 @@ test('exclusão não devolve uso contabilizado', async () => {
   assert.doesNotMatch(migration, /proposals_created\s*=\s*usage\.proposals_created\s*-\s*1/);
 });
 
-test('calculadora não cria, edita ou duplica propostas enquanto a persistência não foi reativada', async () => {
+test('frontend não cria, edita ou duplica propostas após remoção do Wizard', async () => {
   const [service, app] = await Promise.all([
     read(PROPOSAL_SERVICE_PATH),
     read(APP_PATH),
@@ -47,7 +47,7 @@ test('calculadora não cria, edita ou duplica propostas enquanto a persistência
   assert.doesNotMatch(service, /updateProposal/);
   assert.doesNotMatch(service, /duplicateProposal/);
   assert.doesNotMatch(service, /\.insert\(/);
-  assert.match(app, /path="propostas\/nova" element={<ProfessionalSolarCalculator \/>}/);
+  assert.match(app, /path="propostas\/nova" element=\{null\}/);
   assert.match(app, /path="propostas\/:id\/editar" element=\{null\}/);
 });
 
