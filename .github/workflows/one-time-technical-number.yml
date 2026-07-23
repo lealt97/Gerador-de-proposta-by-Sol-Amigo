@@ -1,0 +1,51 @@
+name: Aplicar formatação técnica
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-technical-number.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-calculator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar formatador da calculadora
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/pages/propostas/ProfessionalSizingCalculatorView.tsx')
+          source = source_path.read_text(encoding='utf-8')
+
+          select_import = "import { Select } from '../../components/ui/Select';\n"
+          formatter_import = "import { technicalNumber as number } from '../../lib/formatters/technicalNumber';\n"
+          old_formatter = "const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 });\n\n"
+
+          if formatter_import not in source:
+              if select_import not in source:
+                  raise SystemExit('Importação de Select não encontrada.')
+              source = source.replace(select_import, select_import + formatter_import, 1)
+
+          if old_formatter not in source:
+              raise SystemExit('Formatador antigo não encontrado.')
+          source = source.replace(old_formatter, '', 1)
+          source_path.write_text(source, encoding='utf-8')
+
+          workflow_path = Path('.github/workflows/one-time-technical-number.yml')
+          workflow_path.unlink()
+          PY
+
+      - name: Publicar ajuste na main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: simplificar exibição de grandes valores de energia"
+          git push origin HEAD:main
