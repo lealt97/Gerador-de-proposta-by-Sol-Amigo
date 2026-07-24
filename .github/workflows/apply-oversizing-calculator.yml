@@ -24,19 +24,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-
       - name: Aplicar implementação
         run: python .github/scripts/apply-oversizing-calculator.py
-
-      - name: Instalar dependências
-        run: npm ci
-
-      - name: Validar implementação
-        run: npm run build
 
       - name: Commitar funcionalidade
         run: |
