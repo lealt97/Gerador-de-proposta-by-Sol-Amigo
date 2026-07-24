@@ -1,0 +1,82 @@
+name: Adicionar energia diária ao resumo
+
+on:
+  push:
+    paths:
+      - '.github/workflows/one-time-add-daily-generation-summary.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Adicionar energia de geração diária
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          calculator_path = Path('src/pages/propostas/ProfessionalSizingCalculatorView.tsx')
+          source = calculator_path.read_text(encoding='utf-8')
+
+          old = '''            <PreviewRow label="HSP" value={Number.isFinite(parseNumber(hspDaily)) ? `${number.format(parseNumber(hspDaily))} h/dia` : 'Não informada'} />
+            <PreviewRow label="Potência necessária" value={result ? `${number.format(result.requiredPowerKwp)} kWp` : 'Aguardando HSP'} highlight />'''
+
+          new = '''            <PreviewRow label="HSP" value={Number.isFinite(parseNumber(hspDaily)) ? `${number.format(parseNumber(hspDaily))} h/dia` : 'Não informada'} />
+            <PreviewRow
+              label="Energia de geração"
+              value={result
+                ? `${result.targetDailyGenerationKwh.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh/dia`
+                : 'Aguardando HSP'}
+            />
+            <PreviewRow label="Potência necessária" value={result ? `${number.format(result.requiredPowerKwp)} kWp` : 'Aguardando HSP'} highlight />'''
+
+          if old not in source:
+              raise SystemExit('Trecho do resumo de dimensionamento não encontrado.')
+
+          source = source.replace(old, new, 1)
+          calculator_path.write_text(source, encoding='utf-8')
+
+          test_path = Path('tests/generation-input-only.test.ts')
+          tests = test_path.read_text(encoding='utf-8')
+          marker = "  assert.doesNotMatch(calculator, /setGenerationIncreasePercent\\(String\\(percentage\\)\\)/);\n"
+          additions = '''  assert.match(calculator, /label="Energia de geração"/);
+  assert.match(calculator, /result\.targetDailyGenerationKwh\.toLocaleString/);
+  assert.match(
+    calculator,
+    /label="HSP"[\\s\\S]*label="Energia de geração"[\\s\\S]*label="Potência necessária"/,
+  );
+'''
+          if 'label="Energia de geração"' not in tests:
+              if marker not in tests:
+                  raise SystemExit('Marcador do teste de geração não encontrado.')
+              tests = tests.replace(marker, marker + additions, 1)
+              test_path.write_text(tests, encoding='utf-8')
+
+          Path('.github/workflows/one-time-add-daily-generation-summary.yml').unlink()
+          PY
+
+      - name: Validar alteração
+        run: |
+          npm ci
+          npm run typecheck
+          npm run test
+
+      - name: Publicar diretamente na main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: exibir energia diária no resumo do dimensionamento"
+          git push origin HEAD:main
