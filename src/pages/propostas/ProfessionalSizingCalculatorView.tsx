@@ -13,7 +13,7 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -155,8 +155,10 @@ function Field({
 
 export function ProfessionalSizingCalculator() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { id: draftIdFromRoute } = useParams<{ id?: string }>();
+  const isEditMode = location.pathname.endsWith('/editar');
   const [searchParams] = useSearchParams();
   const clientIdFromQuery = searchParams.get('clienteId') || '';
 
@@ -164,6 +166,7 @@ export function ProfessionalSizingCalculator() {
   const [isHydratingDraft, setIsHydratingDraft] = useState(Boolean(draftIdFromRoute));
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [proposalTitle, setProposalTitle] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState(clientIdFromQuery);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
@@ -194,8 +197,9 @@ export function ProfessionalSizingCalculator() {
   const [paybackForm, setPaybackForm] = useState<ProposalDraftPaybackForm | null>(null);
   const [roofPhotoReference, setRoofPhotoReference] = useState<string | null>(null);
 
-  function hydrateProposalDraft(state: ProposalDraftState) {
-    setCurrentStep(clampProposalFlowStep(state.currentStep));
+  function hydrateProposalDraft(state: ProposalDraftState, fallbackTitle = '', startAtBeginning = false) {
+    setCurrentStep(startAtBeginning ? 0 : clampProposalFlowStep(state.currentStep));
+    setProposalTitle(state.proposalTitle || fallbackTitle);
     setSelectedClientId(state.selectedClientId);
     setConsumptionMode(state.consumptionMode as ConsumptionMode);
     setDirectAverageConsumption(state.directAverageConsumption);
@@ -260,13 +264,15 @@ export function ProfessionalSizingCalculator() {
     const loadDraft = async () => {
       try {
         setIsHydratingDraft(true);
-        const proposal = await proposalService.getFlowDraftById(draftIdFromRoute);
+        const proposal = isEditMode
+          ? await proposalService.getEditableProposalById(draftIdFromRoute)
+          : await proposalService.getFlowDraftById(draftIdFromRoute);
         if (!isProposalDraftState(proposal.flow_state)) {
-          throw new Error('O rascunho não possui um estado de fluxo compatível.');
+          throw new Error('A proposta não possui um estado de fluxo compatível.');
         }
         if (!active) return;
         setDraftId(proposal.id);
-        hydrateProposalDraft(proposal.flow_state);
+        hydrateProposalDraft(proposal.flow_state, proposal.title || '', isEditMode);
       } catch (error) {
         if (!active) return;
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar o rascunho.');
@@ -280,7 +286,7 @@ export function ProfessionalSizingCalculator() {
     return () => {
       active = false;
     };
-  }, [draftIdFromRoute, navigate]);
+  }, [draftIdFromRoute, isEditMode, navigate]);
 
   const selectedClient = useMemo(
     () => clients.find((client) => client.id === selectedClientId) ?? null,
@@ -391,9 +397,20 @@ export function ProfessionalSizingCalculator() {
   };
 
   const validateStep = () => {
-    if (currentStep === 0 && !selectedClient) {
-      toast.error('Selecione um cliente cadastrado.');
-      return false;
+    if (currentStep === 0) {
+      const normalizedTitle = proposalTitle.trim().replace(/\s+/g, ' ');
+      if (normalizedTitle.length < 3) {
+        toast.error('Informe um nome para a proposta com pelo menos 3 caracteres.');
+        return false;
+      }
+      if (normalizedTitle.length > 120) {
+        toast.error('O nome da proposta deve ter no máximo 120 caracteres.');
+        return false;
+      }
+      if (!selectedClient) {
+        toast.error('Selecione um cliente cadastrado.');
+        return false;
+      }
     }
 
     if (currentStep === 1) {
@@ -458,6 +475,7 @@ export function ProfessionalSizingCalculator() {
   const buildDraftState = (step: number): ProposalDraftState => ({
     version: PROPOSAL_DRAFT_VERSION,
     currentStep: step,
+    proposalTitle: proposalTitle.trim().replace(/\s+/g, ' '),
     selectedClientId,
     consumptionMode,
     directAverageConsumption,
@@ -487,7 +505,7 @@ export function ProfessionalSizingCalculator() {
     const tariff = paybackForm ? parseOptionalNumber(paybackForm.tariffCentsPerKwh) : null;
 
     return {
-      title: selectedClient ? `Proposta em elaboração — ${selectedClient.name}` : undefined,
+      title: proposalTitle.trim().replace(/\s+/g, ' ') || (selectedClient ? `Proposta em elaboração — ${selectedClient.name}` : undefined),
       consumption_source: source,
       history: consumptionMode === 'history' ? monthlyConsumption : null,
       monthly_consumption_kwh: consumptionResolution.averageMonthlyConsumptionKwh,
@@ -517,6 +535,16 @@ export function ProfessionalSizingCalculator() {
     const flowState = buildDraftState(nextStep);
     const summary = buildDraftSummary();
 
+    if (isEditMode && draftId) {
+      await proposalService.saveCompletedProposal({
+        proposalId: draftId,
+        flowStep: nextStep,
+        flowState,
+        summary,
+      });
+      return false;
+    }
+
     if (!draftId) {
       const outcome = await proposalService.createOrResumeFlowDraft({
         userId: user.id,
@@ -534,7 +562,7 @@ export function ProfessionalSizingCalculator() {
         if (!isProposalDraftState(outcome.proposal.flow_state)) {
           throw new Error('O rascunho existente não possui dados compatíveis para retomada.');
         }
-        hydrateProposalDraft(outcome.proposal.flow_state);
+        hydrateProposalDraft(outcome.proposal.flow_state, outcome.proposal.title || '');
         toast.info('Já existia um rascunho para este cliente. O preenchimento foi retomado.');
         return true;
       }
@@ -576,16 +604,23 @@ export function ProfessionalSizingCalculator() {
     try {
       setIsSavingDraft(true);
       const flowState = buildDraftState(STEPS.length - 1);
-      await proposalService.completeFlowDraft({
+      const saveInput = {
         proposalId: draftId,
         flowStep: STEPS.length - 1,
         flowState,
         summary: {
           ...buildDraftSummary(),
-          title: selectedClient ? `Proposta solar — ${selectedClient.name}` : undefined,
+          title: proposalTitle.trim().replace(/\s+/g, ' '),
         },
-      });
-      toast.success('Proposta concluída e salva.');
+      };
+
+      if (isEditMode) {
+        await proposalService.saveCompletedProposal(saveInput);
+        toast.success('Proposta atualizada com sucesso.');
+      } else {
+        await proposalService.completeFlowDraft(saveInput);
+        toast.success('Proposta concluída e salva.');
+      }
       navigate(`/propostas/${draftId}`, { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível concluir a proposta.');
@@ -641,7 +676,7 @@ export function ProfessionalSizingCalculator() {
   if (isHydratingDraft) {
     return (
       <div className="flex items-center justify-center gap-3 py-20 text-sm text-slate-500">
-        <Loader2 className="h-5 w-5 animate-spin text-brand-blue" /> Carregando rascunho da proposta...
+        <Loader2 className="h-5 w-5 animate-spin text-brand-blue" /> {isEditMode ? 'Carregando proposta...' : 'Carregando rascunho da proposta...'}
       </div>
     );
   }
@@ -654,7 +689,7 @@ export function ProfessionalSizingCalculator() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-brand-dark">{draftId ? 'Continuar Proposta' : 'Nova Proposta'}</h1>
+            <h1 className="text-2xl font-bold text-brand-dark">{isEditMode ? 'Editar Proposta' : draftId ? 'Continuar Proposta' : 'Nova Proposta'}</h1>
             <p className="text-sm text-slate-500">
               Etapa {currentStep + 1} de {STEPS.length}: {STEPS[currentStep].title}
             </p>
@@ -666,8 +701,10 @@ export function ProfessionalSizingCalculator() {
           <span className="text-xs text-slate-500">
             {isSavingDraft
               ? 'Salvando rascunho...'
-              : draftId
-                ? 'Rascunho salvo automaticamente'
+              : isEditMode
+                ? 'Alterações salvas no registro finalizado'
+                : draftId
+                  ? 'Rascunho salvo automaticamente'
                 : hasCalculation
                   ? 'Cálculo atualizado automaticamente'
                   : 'Preencha os dados para calcular'}
@@ -720,7 +757,22 @@ export function ProfessionalSizingCalculator() {
                   </p>
                 </div>
 
-                {isLoadingClients ? (
+                 <label className="block max-w-xl space-y-2">
+                   <span className="text-sm font-semibold text-brand-dark">Nome da proposta *</span>
+                   <Input
+                     type="text"
+                     value={proposalTitle}
+                     maxLength={120}
+                     placeholder="Ex.: Sistema fotovoltaico — Residência Silva"
+                     onChange={(event) => setProposalTitle(event.target.value)}
+                   />
+                   <span className="flex justify-between gap-4 text-xs text-slate-500">
+                     <span>Este nome identifica a proposta na listagem e pode ser alterado depois.</span>
+                     <span className="shrink-0">{proposalTitle.length}/120</span>
+                   </span>
+                 </label>
+
+                 {isLoadingClients ? (
                   <LoadingState label="Carregando clientes..." />
                 ) : clientsError ? (
                   <ErrorState message={clientsError} />
