@@ -53,6 +53,18 @@ test('aplica geração adicional sobre o consumo compensável', () => {
   assert.equal(result.selectedKitIsAdequate, true);
 });
 
+test('gera 10% a mais no exemplo de consumo compensável de 608,75 kWh', () => {
+  const result = calculateProfessionalSizing(createInput({
+    monthlyConsumptionKwh: Array.from({ length: 12 }, () => 658.75),
+    generationIncreasePercent: 10,
+    selectedKitPowerKwp: null,
+  }));
+
+  assert.equal(result.compensableMonthlyConsumptionKwh, 608.75);
+  assert.equal(result.targetMonthlyGenerationKwh, 669.63);
+  assert.equal(result.requiredPowerKwp, 5.366);
+});
+
 test('kit cadastrado é comparado com a potência calculada sem redimensionar seus equipamentos', () => {
   const result = calculateProfessionalSizing(createInput());
 
