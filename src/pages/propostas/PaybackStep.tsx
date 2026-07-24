@@ -32,6 +32,7 @@ import {
   type ConnectionType,
 } from '../../lib/calculations/professionalSizing';
 import { profileService } from '../../services/profileService';
+import type { ProposalDraftPaybackForm } from '../../types/proposalDraft';
 import type { SolarKit } from '../../types/solarKit';
 
 const currency = new Intl.NumberFormat('pt-BR', {
@@ -59,21 +60,7 @@ const STATUS_STYLES: Record<PaybackStatus, string> = {
   unfeasible: 'border-red-200 bg-red-50 text-red-700',
 };
 
-type AdditionalCostDraft = {
-  id: string;
-  description: string;
-  amount: string;
-};
-
-type PaybackFormState = {
-  tariffCentsPerKwh: string;
-  pisPercent: string;
-  cofinsPercent: string;
-  icmsPercent: string;
-  otherTariffsPercent: string;
-  marginPercentage: string;
-  additionalCosts: AdditionalCostDraft[];
-};
+type PaybackFormState = ProposalDraftPaybackForm;
 
 const createCost = (): AdditionalCostDraft => ({
   id: `cost-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -140,17 +127,21 @@ export function PaybackStep({
   connectionType,
   monthlyCompensableConsumptionKwh,
   monthlyGenerationKwh,
+  initialForm,
+  onDraftChange,
   onResultChange,
 }: {
   selectedKit: SolarKit;
   connectionType: ConnectionType;
   monthlyCompensableConsumptionKwh: number;
   monthlyGenerationKwh: number;
+  initialForm?: ProposalDraftPaybackForm | null;
+  onDraftChange?: (form: ProposalDraftPaybackForm) => void;
   onResultChange: (result: PaybackResult | null) => void;
 }) {
   const { user } = useAuth();
   const storageKey = `sol-amigo:payback:${selectedKit.id}`;
-  const [form, setForm] = useState<PaybackFormState>(() => createDefaultForm());
+  const [form, setForm] = useState<PaybackFormState>(() => initialForm || createDefaultForm());
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -158,6 +149,12 @@ export function PaybackStep({
 
     const hydrate = async () => {
       setHydrated(false);
+      if (initialForm) {
+        if (active) setForm(initialForm);
+        if (active) setHydrated(true);
+        return;
+      }
+
       const saved = sessionStorage.getItem(storageKey);
       if (saved) {
         try {
@@ -197,7 +194,8 @@ export function PaybackStep({
   useEffect(() => {
     if (!hydrated) return;
     sessionStorage.setItem(storageKey, JSON.stringify(form));
-  }, [form, hydrated, storageKey]);
+    onDraftChange?.(form);
+  }, [form, hydrated, onDraftChange, storageKey]);
 
   const calculation = useMemo(() => {
     if (!hydrated) return { result: null, error: null };
