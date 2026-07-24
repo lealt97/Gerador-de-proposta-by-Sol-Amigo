@@ -31,6 +31,7 @@ export type ProposalDraftPaybackForm = {
 export type ProposalDraftStateV1 = {
   version: typeof PROPOSAL_DRAFT_VERSION;
   currentStep: number;
+  proposalTitle?: string;
   selectedClientId: string;
   consumptionMode: ProposalDraftConsumptionMode;
   directAverageConsumption: string;
