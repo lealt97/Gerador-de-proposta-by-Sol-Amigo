@@ -11,6 +11,7 @@ const APP = 'src/App.tsx';
 const CALCULATOR = 'src/pages/propostas/ProfessionalSizingCalculatorView.tsx';
 const LIST = 'src/pages/propostas/ProposalList.tsx';
 const DETAILS = 'src/pages/propostas/ProposalDetails.tsx';
+const ACTIONS = 'src/components/proposals/ProposalActionButtons.tsx';
 const PAYBACK = 'src/pages/propostas/PaybackStep.tsx';
 const SERVICE = 'src/services/proposalService.ts';
 const SCHEMA = 'supabase-schema.sql';
@@ -75,15 +76,17 @@ test('não cria uma segunda proposta ativa para o mesmo cliente', async () => {
   assert.match(schema, /CREATE UNIQUE INDEX IF NOT EXISTS proposals_one_active_flow_draft_per_client_uidx/);
 });
 
-test('rascunho em fluxo oferece somente continuar e excluir na listagem', async () => {
-  const [list, details] = await Promise.all([
+test('rascunho em fluxo oferece somente continuar e excluir em todas as listagens', async () => {
+  const [list, actions, details] = await Promise.all([
     readFile(LIST, 'utf8'),
+    readFile(ACTIONS, 'utf8'),
     readFile(DETAILS, 'utf8'),
   ]);
 
-  assert.match(list, /const isFlowDraft = isActiveProposalFlowDraft\(proposal\)/);
-  assert.match(list, /isFlowDraft \? \([\s\S]*Continuar[\s\S]*\) : \([\s\S]*title="Visualizar"[\s\S]*title="Editar"[\s\S]*title="Duplicar"[\s\S]*title="Renomear"/);
-  assert.match(list, /title="Excluir"/);
+  assert.match(list, /<ProposalActionButtons/);
+  assert.match(actions, /const isFlowDraft = isActiveProposalFlowDraft\(proposal\)/);
+  assert.match(actions, /isFlowDraft \? \([\s\S]*Continuar[\s\S]*\) : \([\s\S]*title="Visualizar"[\s\S]*title="Editar"[\s\S]*title="Duplicar"[\s\S]*title="Renomear"/);
+  assert.match(actions, /title="Excluir"/);
   assert.match(list, /statusFilter === 'pending_like'[\s\S]*proposal\.status === 'pending'/);
   assert.match(details, /if \(isActiveProposalFlowDraft\(proposal\)\)[\s\S]*<Navigate to=\{getProposalContinuePath\(proposal\.id\)\} replace/);
 });
