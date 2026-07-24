@@ -9,116 +9,147 @@ build=0
 > tsc --noEmit
 
 
-=== TESTS ===
-  duration_ms: 2.115924
-  type: 'test'
-  ...
-# Subtest: armazena e remove a foto em caminho privado do próprio usuário
-ok 253 - armazena e remove a foto em caminho privado do próprio usuário
-  ---
-  duration_ms: 2.292419
-  type: 'test'
-  ...
-# Subtest: segurança permite desconectar outros aparelhos sem encerrar a sessão atual
-ok 254 - segurança permite desconectar outros aparelhos sem encerrar a sessão atual
-  ---
-  duration_ms: 8.337
-  type: 'test'
-  ...
-# Subtest: segurança permite encerrar todas as sessões e retornar ao login
-ok 255 - segurança permite encerrar todas as sessões e retornar ao login
-  ---
-  duration_ms: 5.533204
-  type: 'test'
-  ...
-# Subtest: controle de sessões aparece somente na aba Segurança
-ok 256 - controle de sessões aparece somente na aba Segurança
-  ---
-  duration_ms: 3.466907
-  type: 'test'
-  ...
-# Subtest: normaliza textos, números e remove bateria de kits on-grid
-ok 257 - normaliza textos, números e remove bateria de kits on-grid
-  ---
-  duration_ms: 1.302608
-  type: 'test'
-  ...
-# Subtest: preserva dados de armazenamento em kits híbridos e off-grid
-ok 258 - preserva dados de armazenamento em kits híbridos e off-grid
-  ---
-  duration_ms: 0.262999
-  type: 'test'
-  ...
-# Subtest: cadastra kit vinculado ao usuário autenticado
-ok 259 - cadastra kit vinculado ao usuário autenticado
-  ---
-  duration_ms: 0.490383
-  type: 'test'
-  ...
-# Subtest: edita o kit correto com payload normalizado
-ok 260 - edita o kit correto com payload normalizado
-  ---
-  duration_ms: 0.378429
-  type: 'test'
-  ...
-# Subtest: duplica o kit com novo nome e novo proprietário
-ok 261 - duplica o kit com novo nome e novo proprietário
-  ---
-  duration_ms: 0.349364
-  type: 'test'
-  ...
-# Subtest: altera o status e exclui somente o kit solicitado
-ok 262 - altera o status e exclui somente o kit solicitado
-  ---
-  duration_ms: 0.983011
-  type: 'test'
-  ...
-# Subtest: lista kits cadastrados e somente os ativos
-ok 263 - lista kits cadastrados e somente os ativos
-  ---
-  duration_ms: 0.394885
-  type: 'test'
-  ...
-# Subtest: recomenda o menor kit ativo e compatível que atende a potência
-ok 264 - recomenda o menor kit ativo e compatível que atende a potência
-  ---
-  duration_ms: 0.339639
-  type: 'test'
-  ...
-# Subtest: filtra kits pelos principais campos do catálogo
-ok 265 - filtra kits pelos principais campos do catálogo
-  ---
-  duration_ms: 0.484504
-  type: 'test'
-  ...
-# Subtest: cria snapshot imutável com os dados comerciais e técnicos do kit
-ok 266 - cria snapshot imutável com os dados comerciais e técnicos do kit
-  ---
-  duration_ms: 0.671986
-  type: 'test'
-  ...
-# Subtest: propaga falhas do repositório ao cadastrar e excluir
-ok 267 - propaga falhas do repositório ao cadastrar e excluir
-  ---
-  duration_ms: 0.837033
+=== TEST FAILURES ===
+791-  ...
+792-# Subtest: onboarding não depende mais de proposta ou cálculo
+793-ok 132 - onboarding não depende mais de proposta ou cálculo
+794-  ---
+795-  duration_ms: 1.394452
+796-  type: 'test'
+797-  ...
+798-# Subtest: dimensionamento começa pelo cliente e oferece três modos de consumo sem reativar mutações antigas
+799:not ok 133 - dimensionamento começa pelo cliente e oferece três modos de consumo sem reativar mutações antigas
+800-  ---
+801-  duration_ms: 7.646895
+802-  type: 'test'
+803-  location: '/home/runner/work/Sol-Amigo-PRO/Sol-Amigo-PRO/tests/p2-launch-readiness.test.ts:1:6646'
+804-  failureType: 'testCodeFailure'
+805-  error: |-
+806-    The input was expected to not match the regular expression /createProposal/. Input:
+807-    
+808-    "import { supabase } from '../lib/supabase/client';\n" +
+809-      "import { isActiveProposalFlowDraft } from '../lib/proposals/flow';\n" +
+810-      "import { Proposal } from '../types/proposal';\n" +
+811-      "import { isProposalDraftState, type ProposalDraftState } from '../types/proposalDraft';\n" +
+812-      '\n' +
+813-      "const profileSelect = 'company_name, logo_url, seller_name, seller_phone, seller_email, seller_signature_url, website, company_email, default_validity_days, default_margin_percentage';\n" +
+814-      "const clientSelect = 'name, document, email, phone, city, state';\n" +
+815-      '\n' +
+816-      'const buildSecurePdfUrl = (publicToken?: string | null) => {\n' +
+817-      '  if (!publicToken) return null;\n' +
+818-      "  const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/\\/$/, '');\n" +
+819-      '  if (!supabaseUrl) return null;\n' +
+820-      '  return `${supabaseUrl}/functions/v1/public-proposal-pdf?token=${encodeURIComponent(publicToken)}`;\n' +
+821-      '};\n' +
+822-      '\n' +
+823-      'export type ProposalFlowSummary = Partial<Pick<Proposal,\n' +
+824-      "  | 'title'\n" +
+825-      "  | 'consumption_source'\n" +
+826-      "  | 'history'\n" +
+827-      "  | 'monthly_consumption_kwh'\n" +
+828-      "  | 'estimated_daily_consumption'\n" +
+829-      "  | 'energy_tariff'\n" +
+--
+1978-  ...
+1979-# Subtest: identifica somente rascunhos ativos do fluxo e limita a etapa salva
+1980-ok 222 - identifica somente rascunhos ativos do fluxo e limita a etapa salva
+1981-  ---
+1982-  duration_ms: 1.162407
+1983-  type: 'test'
+1984-  ...
+1985-# Subtest: o fluxo possui rota de continuação e salva antes de avançar
+1986:not ok 223 - o fluxo possui rota de continuação e salva antes de avançar
+1987-  ---
+1988-  duration_ms: 13.335487
+1989-  type: 'test'
+1990-  location: '/home/runner/work/Sol-Amigo-PRO/Sol-Amigo-PRO/tests/proposal-draft-flow.test.ts:1:1171'
+1991-  failureType: 'testCodeFailure'
+1992-  error: |-
+1993-    The input did not match the regular expression /hydrateProposalDraft\(proposal\.flow_state\)/. Input:
+1994-    
+1995-    "import { useEffect, useMemo, useState } from 'react';\n" +
+1996-      'import {\n' +
+1997-      '  AlertTriangle,\n' +
+1998-      '  ArrowLeft,\n' +
+1999-      '  ArrowRight,\n' +
+2000-      '  CalendarDays,\n' +
+2001-      '  CheckCircle2,\n' +
+2002-      '  Gauge,\n' +
+2003-      '  ListChecks,\n' +
+2004-      '  Loader2,\n' +
+2005-      '  PackageCheck,\n' +
+2006-      '  Plus,\n' +
+2007-      '  Trash2,\n' +
+2008-      '  UserRound,\n' +
+2009-      "} from 'lucide-react';\n" +
+2010-      "import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';\n" +
+2011-      "import { toast } from 'sonner';\n" +
+2012-      "import { Button } from '../../components/ui/Button';\n" +
+2013-      "import { useAuth } from '../../contexts/AuthContext';\n" +
+2014-      "import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';\n" +
+2015-      "import { Input } from '../../components/ui/Input';\n" +
+2016-      "import { Select } from '../../components/ui/Select';\n" +
+--
+3836-  ...
+3837-# Subtest: não cria uma segunda proposta ativa para o mesmo cliente
+3838-ok 225 - não cria uma segunda proposta ativa para o mesmo cliente
+3839-  ---
+3840-  duration_ms: 6.009628
+3841-  type: 'test'
+3842-  ...
+3843-# Subtest: rascunho em fluxo oferece somente continuar e excluir na listagem
+3844:not ok 226 - rascunho em fluxo oferece somente continuar e excluir na listagem
+3845-  ---
+3846-  duration_ms: 3.063671
+3847-  type: 'test'
+3848-  location: '/home/runner/work/Sol-Amigo-PRO/Sol-Amigo-PRO/tests/proposal-draft-flow.test.ts:1:3472'
+3849-  failureType: 'testCodeFailure'
+3850-  error: |-
+3851-    The input was expected to not match the regular expression /Duplicar/. Input:
+3852-    
+3853-    "import { useEffect, useState } from 'react';\n" +
+3854-      "import { toast } from 'sonner';\n" +
+3855-      "import { useNavigate } from 'react-router-dom';\n" +
+3856-      "import { ArrowRight, Copy, Eye, FilePenLine, Pencil, Plus, Search, Trash2 } from 'lucide-react';\n" +
+3857-      "import { proposalService } from '../../services/proposalService';\n" +
+3858-      "import { Proposal } from '../../types/proposal';\n" +
+3859-      "import { Button } from '../../components/ui/Button';\n" +
+3860-      "import { Input } from '../../components/ui/Input';\n" +
+3861-      "import { Card } from '../../components/ui/Card';\n" +
+3862-      "import { Select } from '../../components/ui/Select';\n" +
+3863-      "import { formatDate } from '../../lib/utils';\n" +
+3864-      "import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';\n" +
+3865-      "import { RenameProposalModal } from '../../components/proposals/RenameProposalModal';\n" +
+3866-      "import { getProposalContinuePath, getProposalEditPath, isActiveProposalFlowDraft } from '../../lib/proposals/flow';\n" +
+3867-      '\n' +
+3868-      'export function ProposalList() {\n' +
+3869-      '  const [proposals, setProposals] = useState<Proposal[]>([]);\n' +
+3870-      '  const [filteredProposals, setFilteredProposals] = useState<Proposal[]>([]);\n' +
+3871-      '  const [isLoading, setIsLoading] = useState(true);\n' +
+3872-      '  const [error, setError] = useState<string | null>(null);\n' +
+3873-      "  const [searchTerm, setSearchTerm] = useState('');\n" +
+3874-      "  const [statusFilter, setStatusFilter] = useState('');\n" +
+
+=== TEST SUMMARY ===
+  duration_ms: 1.034406
   type: 'test'
   ...
 # Subtest: remove casas decimais de valores técnicos com quatro ou mais dígitos
 ok 268 - remove casas decimais de valores técnicos com quatro ou mais dígitos
   ---
-  duration_ms: 0.973635
+  duration_ms: 0.957703
   type: 'test'
   ...
 # Subtest: mantém precisão de até três casas para valores abaixo de mil
 ok 269 - mantém precisão de até três casas para valores abaixo de mil
   ---
-  duration_ms: 0.211527
+  duration_ms: 0.196171
   type: 'test'
   ...
 # Subtest: usa marcador neutro para valores inválidos
 ok 270 - usa marcador neutro para valores inválidos
   ---
-  duration_ms: 0.110595
+  duration_ms: 0.111616
   type: 'test'
   ...
 1..270
@@ -129,7 +160,7 @@ ok 270 - usa marcador neutro para valores inválidos
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 6844.21562
+# duration_ms 7176.977343
 
 === BUILD ===
 
@@ -149,4 +180,4 @@ computing gzip size...
 - Using dynamic import() to code-split the application
 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
-[32m✓ built in 7.03s[39m
+[32m✓ built in 7.09s[39m
