@@ -19,3 +19,7 @@ export function isActiveProposalFlowDraft(
 export function getProposalContinuePath(proposalId: string) {
   return `/propostas/${proposalId}/continuar`;
 }
+
+export function getProposalEditPath(proposalId: string) {
+  return `/propostas/${proposalId}/editar`;
+}
