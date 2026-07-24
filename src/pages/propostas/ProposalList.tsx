@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowRight, Copy, Eye, FilePenLine, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { proposalService } from '../../services/proposalService';
 import { Proposal } from '../../types/proposal';
 import { Button } from '../../components/ui/Button';
@@ -10,7 +10,8 @@ import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';
 import { formatDate } from '../../lib/utils';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
-import { getProposalContinuePath, isActiveProposalFlowDraft } from '../../lib/proposals/flow';
+import { RenameProposalModal } from '../../components/proposals/RenameProposalModal';
+import { getProposalContinuePath, getProposalEditPath, isActiveProposalFlowDraft } from '../../lib/proposals/flow';
 
 export function ProposalList() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -22,6 +23,9 @@ export function ProposalList() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [proposalToDelete, setProposalToDelete] = useState<{ id: string; title: string | null } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [proposalToRename, setProposalToRename] = useState<{ id: string; title: string } | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [duplicatingProposalId, setDuplicatingProposalId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const loadProposals = async () => {
@@ -69,6 +73,35 @@ export function ProposalList() {
       toast.error(err instanceof Error ? err.message : 'Erro ao excluir proposta');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const confirmRename = async (title: string) => {
+    if (!proposalToRename) return;
+    try {
+      setIsRenaming(true);
+      await proposalService.renameProposal(proposalToRename.id, title);
+      toast.success('Proposta renomeada.');
+      setProposalToRename(null);
+      await loadProposals();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao renomear proposta');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const duplicateProposal = async (proposal: Proposal) => {
+    try {
+      setDuplicatingProposalId(proposal.id);
+      const duplicate = await proposalService.duplicateProposal(proposal.id);
+      toast.success('Proposta duplicada com sucesso.');
+      await loadProposals();
+      navigate(`/propostas/${duplicate.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao duplicar proposta');
+    } finally {
+      setDuplicatingProposalId(null);
     }
   };
 
@@ -127,13 +160,18 @@ export function ProposalList() {
                     <td className="px-4 py-3"><span className="rounded-full border border-brand-border px-2.5 py-0.5 text-xs">{statusLabel(proposal.status)}</span></td>
                     <td className="px-4 py-3 text-slate-500">{formatDate(proposal.updated_at || proposal.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         {isFlowDraft ? (
                           <Button className="gap-2" onClick={() => navigate(getProposalContinuePath(proposal.id))}>
                             Continuar <ArrowRight className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="icon" title="Visualizar" onClick={() => navigate(`/propostas/${proposal.id}`)}><Eye className="h-4 w-4" /></Button>
+                          <>
+                            <Button variant="ghost" size="icon" title="Visualizar" onClick={() => navigate(`/propostas/${proposal.id}`)}><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" title="Editar" onClick={() => navigate(getProposalEditPath(proposal.id))}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" title="Duplicar" disabled={duplicatingProposalId === proposal.id} onClick={() => void duplicateProposal(proposal)}><Copy className={`h-4 w-4 ${duplicatingProposalId === proposal.id ? 'animate-pulse' : ''}`} /></Button>
+                            <Button variant="ghost" size="icon" title="Renomear" onClick={() => setProposalToRename({ id: proposal.id, title: proposal.title || 'Proposta sem título' })}><FilePenLine className="h-4 w-4" /></Button>
+                          </>
                         )}
                         <Button variant="ghost" size="icon" title="Excluir" className="text-red-500" onClick={() => { setProposalToDelete({ id: proposal.id, title: proposal.title }); setDeleteModalOpen(true); }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
@@ -145,6 +183,14 @@ export function ProposalList() {
           </table>
         </div>
       </Card>
+
+      <RenameProposalModal
+        isOpen={Boolean(proposalToRename)}
+        initialTitle={proposalToRename?.title || ''}
+        isLoading={isRenaming}
+        onClose={() => { if (!isRenaming) setProposalToRename(null); }}
+        onConfirm={(title) => void confirmRename(title)}
+      />
 
       <DeleteConfirmModal
         isOpen={deleteModalOpen}
