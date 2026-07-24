@@ -1,18 +1,17 @@
-# Execução única para aplicar a funcionalidade na main.
-name: Aplicar oversizing na calculadora
+# Execução única para diagnosticar o build da funcionalidade.
+name: Diagnosticar build de oversizing
 
 on:
   push:
     branches: [main]
     paths:
-      - '.github/scripts/apply-oversizing-calculator.py'
       - '.github/workflows/apply-oversizing-calculator.yml'
 
 permissions:
   contents: write
 
 jobs:
-  apply-feature:
+  diagnose-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,24 +19,30 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
+          node-version: '20'
+          cache: npm
 
-      - name: Aplicar implementação
-        run: python .github/scripts/apply-oversizing-calculator.py
+      - name: Executar build e salvar log
+        shell: bash
+        run: |
+          set +e
+          npm ci > .github/oversizing-build.log 2>&1
+          npm_ci_status=$?
+          if [ "$npm_ci_status" -eq 0 ]; then
+            npm run build >> .github/oversizing-build.log 2>&1
+            build_status=$?
+          else
+            build_status=$npm_ci_status
+          fi
+          printf '\nEXIT_CODE=%s\n' "$build_status" >> .github/oversizing-build.log
+          exit 0
 
-      - name: Commitar funcionalidade
+      - name: Commitar log de diagnóstico
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/lib/calculations/oversizing.ts \
-            src/pages/propostas/ProfessionalSizingCalculatorView.tsx \
-            tests/oversizing.test.ts \
-            tests/oversizing-calculator-integration.test.ts
-          if git diff --cached --quiet; then
-            echo "Nenhuma alteração necessária."
-            exit 0
-          fi
-          git commit -m "feat: adicionar análise de oversizing à calculadora"
+          git add .github/oversizing-build.log
+          git commit -m "chore: registrar diagnóstico do build de oversizing"
           git push origin main
