@@ -126,8 +126,8 @@ source = replace_once(
 
 source = replace_once(
     source,
-    "                  <Button type=\"button\" onClick={completeSizing} className=\"gap-2\">\n                    Concluir dimensionamento <CheckCircle2 className=\"h-4 w-4\" />",
-    "                  <Button type=\"button\" onClick={completeSizing} className=\"gap-2\" disabled={isSavingDraft}>\n                    {isEditMode ? 'Salvar alterações' : 'Concluir dimensionamento'} <CheckCircle2 className=\"h-4 w-4\" />",
+    "                  <Button type=\"button\" onClick={() => void completeSizing()} className=\"gap-2\" disabled={isSavingDraft}>\n                    Concluir dimensionamento <CheckCircle2 className=\"h-4 w-4\" />",
+    "                  <Button type=\"button\" onClick={() => void completeSizing()} className=\"gap-2\" disabled={isSavingDraft}>\n                    {isEditMode ? 'Salvar alterações' : 'Concluir dimensionamento'} <CheckCircle2 className=\"h-4 w-4\" />",
     'botão final',
 )
 
