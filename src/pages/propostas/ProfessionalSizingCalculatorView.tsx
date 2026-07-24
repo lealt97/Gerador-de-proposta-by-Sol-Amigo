@@ -911,6 +911,12 @@ function SizingPreview({
             <PreviewRow label="Geração adicional" value={Number.isFinite(parseNumber(generationIncreasePercent)) ? `${number.format(parseNumber(generationIncreasePercent))}%` : '0%'} />
             <PreviewRow label="Meta de geração" value={result ? `${number.format(result.targetMonthlyGenerationKwh)} kWh/mês` : 'Aguardando HSP'} />
             <PreviewRow label="HSP" value={Number.isFinite(parseNumber(hspDaily)) ? `${number.format(parseNumber(hspDaily))} h/dia` : 'Não informada'} />
+            <PreviewRow
+              label="Energia de geração"
+              value={result
+                ? `${result.targetDailyGenerationKwh.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh/dia`
+                : 'Aguardando HSP'}
+            />
             <PreviewRow label="Potência necessária" value={result ? `${number.format(result.requiredPowerKwp)} kWp` : 'Aguardando HSP'} highlight />
           </dl>
         )}
