@@ -11,6 +11,7 @@ export type ProfessionalSizingInput = {
   connectionType: ConnectionType;
   hspDaily: number;
   performanceRatioPercent: number;
+  generationIncreasePercent?: number;
   selectedKitPowerKwp?: number | null;
 };
 
@@ -20,6 +21,9 @@ export type ProfessionalSizingResult = {
   availabilityConsumptionKwh: number;
   compensableMonthlyConsumptionKwh: number;
   compensableDailyConsumptionKwh: number;
+  generationIncreasePercent: number;
+  targetMonthlyGenerationKwh: number;
+  targetDailyGenerationKwh: number;
   performanceRatio: number;
   requiredPowerKwp: number;
   selectedKitPowerKwp: number | null;
@@ -66,6 +70,12 @@ const validateInput = (input: ProfessionalSizingInput) => {
     throw new Error('O rendimento global deve ser maior que 0% e menor ou igual a 100%.');
   }
 
+  const generationIncreasePercent = input.generationIncreasePercent ?? 0;
+  assertFinite(generationIncreasePercent, 'Geração adicional');
+  if (generationIncreasePercent < 0 || generationIncreasePercent > 100) {
+    throw new Error('A geração adicional deve estar entre 0% e 100%.');
+  }
+
   if (input.selectedKitPowerKwp != null) {
     assertFinite(input.selectedKitPowerKwp, 'Potência do kit');
     if (input.selectedKitPowerKwp <= 0) {
@@ -95,8 +105,12 @@ export function calculateProfessionalSizing(
   }
 
   const compensableDailyConsumptionKwh = compensableMonthlyConsumptionKwh / 30;
+  const generationIncreasePercent = input.generationIncreasePercent ?? 0;
+  const targetMonthlyGenerationKwh = compensableMonthlyConsumptionKwh
+    * (1 + generationIncreasePercent / 100);
+  const targetDailyGenerationKwh = targetMonthlyGenerationKwh / 30;
   const performanceRatio = input.performanceRatioPercent / 100;
-  const requiredPowerKwp = compensableDailyConsumptionKwh
+  const requiredPowerKwp = targetDailyGenerationKwh
     / (input.hspDaily * performanceRatio);
 
   const selectedKitPowerKwp = input.selectedKitPowerKwp ?? null;
@@ -105,10 +119,10 @@ export function calculateProfessionalSizing(
     : selectedKitPowerKwp * input.hspDaily * 30 * performanceRatio;
   const selectedKitCoveragePercent = selectedKitEstimatedMonthlyGenerationKwh == null
     ? null
-    : (selectedKitEstimatedMonthlyGenerationKwh / compensableMonthlyConsumptionKwh) * 100;
+    : (selectedKitEstimatedMonthlyGenerationKwh / targetMonthlyGenerationKwh) * 100;
   const selectedKitEnergyBalanceKwh = selectedKitEstimatedMonthlyGenerationKwh == null
     ? null
-    : selectedKitEstimatedMonthlyGenerationKwh - compensableMonthlyConsumptionKwh;
+    : selectedKitEstimatedMonthlyGenerationKwh - targetMonthlyGenerationKwh;
   const selectedKitIsAdequate = selectedKitPowerKwp == null
     ? null
     : selectedKitPowerKwp >= requiredPowerKwp;
@@ -119,6 +133,9 @@ export function calculateProfessionalSizing(
     availabilityConsumptionKwh,
     compensableMonthlyConsumptionKwh: round(compensableMonthlyConsumptionKwh),
     compensableDailyConsumptionKwh: round(compensableDailyConsumptionKwh, 3),
+    generationIncreasePercent: round(generationIncreasePercent),
+    targetMonthlyGenerationKwh: round(targetMonthlyGenerationKwh),
+    targetDailyGenerationKwh: round(targetDailyGenerationKwh, 3),
     performanceRatio: round(performanceRatio, 4),
     requiredPowerKwp: round(requiredPowerKwp, 3),
     selectedKitPowerKwp: selectedKitPowerKwp == null ? null : round(selectedKitPowerKwp, 3),
