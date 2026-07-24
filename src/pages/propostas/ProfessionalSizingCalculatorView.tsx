@@ -41,6 +41,7 @@ import {
   calculateModuleSizing,
   type ModuleSizingResult,
 } from '../../lib/calculations/moduleSizing';
+import { calculateDcAcOversizing } from '../../lib/calculations/oversizing';
 import type { PaybackResult } from '../../lib/calculations/payback';
 import { clampProposalFlowStep, getProposalContinuePath } from '../../lib/proposals/flow';
 import { clientService } from '../../services/clientService';
@@ -306,6 +307,17 @@ export function ProfessionalSizingCalculator() {
     () => kits.find((kit) => kit.id === selectedKitId) ?? null,
     [kits, selectedKitId],
   );
+
+  const selectedKitOversizing = useMemo(() => {
+    const inverterPowerKw = selectedKit?.inverter_power_kw;
+    if (!selectedKit || inverterPowerKw == null || inverterPowerKw <= 0) return null;
+
+    try {
+      return calculateDcAcOversizing(selectedKit.kit_power_kwp, inverterPowerKw);
+    } catch {
+      return null;
+    }
+  }, [selectedKit]);
 
   const consumptionModeInput = useMemo(() => ({
     mode: consumptionMode,
@@ -1181,6 +1193,7 @@ export function ProfessionalSizingCalculator() {
                             <Detail label="Módulos" value={`${selectedKit.module_quantity} × ${number.format(selectedKit.module_power_w)} W`} />
                             <Detail label="Módulo" value={[selectedKit.module_brand, selectedKit.module_model].filter(Boolean).join(' ') || 'Não informado'} />
                             <Detail label="Inversor" value={[selectedKit.inverter_brand, selectedKit.inverter_model].filter(Boolean).join(' ') || 'Não informado'} />
+                            <Detail label="Potência AC do inversor" value={selectedKit.inverter_power_kw && selectedKit.inverter_power_kw > 0 ? `${number.format(selectedKit.inverter_power_kw)} kW` : 'Não informada'} />
                           </dl>
                         </CardContent>
                       </Card>
@@ -1205,6 +1218,45 @@ export function ProfessionalSizingCalculator() {
                         </CardContent>
                       </Card>
                     </div>
+
+                    {selectedKitOversizing ? (
+                      <div className={`rounded-xl border p-5 ${
+                        selectedKitOversizing.status === 'reference'
+                          ? 'border-emerald-200 bg-emerald-50/60'
+                          : selectedKitOversizing.status === 'above_reference'
+                            ? 'border-amber-200 bg-amber-50/70'
+                            : 'border-brand-blue/20 bg-brand-blue/5'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          {selectedKitOversizing.status === 'reference' ? (
+                            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
+                          ) : selectedKitOversizing.status === 'above_reference' ? (
+                            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />
+                          ) : (
+                            <Gauge className="mt-0.5 h-6 w-6 shrink-0 text-brand-blue" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-wider text-brand-blue">Oversizing DC/AC</p>
+                            <h3 className="mt-1 text-lg font-bold text-brand-dark">{selectedKitOversizing.statusLabel}</h3>
+                            <p className="mt-1 text-sm leading-6 text-slate-600">{selectedKitOversizing.guidance}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                          <Summary label="Potência DC dos módulos" value={`${number.format(selectedKitOversizing.dcPowerKwp)} kWp`} />
+                          <Summary label="Potência AC do inversor" value={`${number.format(selectedKitOversizing.acPowerKw)} kW`} />
+                          <Summary label="Relação DC/AC" value={number.format(selectedKitOversizing.dcAcRatio)} />
+                          <Summary label="Oversizing" value={`${number.format(selectedKitOversizing.oversizingPercent)}%`} highlight />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-5 text-amber-800">
+                        <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0" />
+                        <div>
+                          <p className="font-bold">Potência AC do inversor não informada</p>
+                          <p className="mt-1 text-sm leading-6">Cadastre a potência do inversor no catálogo do kit para calcular a relação DC/AC e o oversizing.</p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                       <Summary label="Potência necessária" value={`${number.format(result.requiredPowerKwp)} kWp`} />
@@ -1289,6 +1341,12 @@ export function ProfessionalSizingCalculator() {
                             <PreviewRow label="Potência necessária" value={`${number.format(result.requiredPowerKwp)} kWp`} />
                             <PreviewRow label="Geração estimada" value={`${number.format(result.selectedKitEstimatedMonthlyGenerationKwh ?? 0)} kWh/mês`} />
                             <PreviewRow label="Cobertura da meta" value={`${number.format(result.selectedKitCoveragePercent ?? 0)}%`} />
+                            {selectedKitOversizing && (
+                              <>
+                                <PreviewRow label="Relação DC/AC" value={number.format(selectedKitOversizing.dcAcRatio)} />
+                                <PreviewRow label="Oversizing" value={`${number.format(selectedKitOversizing.oversizingPercent)}%`} />
+                              </>
+                            )}
                           </dl>
                         </CardContent>
                       </Card>
