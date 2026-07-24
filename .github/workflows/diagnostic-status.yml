@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   statuses: write
 
 concurrency:
@@ -24,24 +24,6 @@ jobs:
     steps:
       - name: Baixar código
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Aplicar nome e edição no Wizard
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          python3 .github/scripts/apply-finalized-proposal-actions-v3.py
-
-          if git diff --quiet; then
-            echo "As ações já estão aplicadas."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/pages/propostas/ProfessionalSizingCalculatorView.tsx .github/scripts/apply-finalized-proposal-actions-v3.py
-            git commit -m "feat: nomear e editar propostas pelo wizard"
-            git push origin HEAD:main
-          fi
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
