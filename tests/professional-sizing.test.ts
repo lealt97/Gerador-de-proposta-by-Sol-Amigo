@@ -45,7 +45,7 @@ test('aplica geração adicional sobre o consumo compensável', () => {
   assert.equal(result.compensableMonthlyConsumptionKwh, 550);
   assert.equal(result.generationIncreasePercent, 10);
   assert.equal(result.targetMonthlyGenerationKwh, 605);
-  assert.equal(result.targetDailyGenerationKwh, 20.167);
+  assert.equal(result.targetDailyGenerationKwh, 20.16);
   assert.equal(result.requiredPowerKwp, 4.848);
   assert.equal(result.selectedKitEstimatedMonthlyGenerationKwh, 617.76);
   assert.equal(result.selectedKitCoveragePercent, 102.11);
@@ -63,6 +63,21 @@ test('gera 10% a mais no exemplo de consumo compensável de 608,75 kWh', () => {
   assert.equal(result.compensableMonthlyConsumptionKwh, 608.75);
   assert.equal(result.targetMonthlyGenerationKwh, 669.63);
   assert.equal(result.requiredPowerKwp, 5.366);
+});
+
+test('exibe 20,26 kWh por dia para consumo médio de 658 kWh em ligação bifásica', () => {
+  const result = calculateProfessionalSizing(createInput({
+    monthlyConsumptionKwh: Array.from({ length: 12 }, () => 658),
+    connectionType: 'biphase',
+    hspDaily: 5.56,
+    performanceRatioPercent: 80,
+    generationIncreasePercent: 0,
+    selectedKitPowerKwp: null,
+  }));
+
+  assert.equal(result.compensableMonthlyConsumptionKwh, 608);
+  assert.equal(result.targetDailyGenerationKwh, 20.26);
+  assert.equal(result.requiredPowerKwp, 4.556);
 });
 
 test('kit cadastrado é comparado com a potência calculada sem redimensionar seus equipamentos', () => {
