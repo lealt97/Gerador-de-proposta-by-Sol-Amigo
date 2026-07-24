@@ -43,6 +43,7 @@ import { clientService } from '../../services/clientService';
 import { solarKitService } from '../../services/solarKitService';
 import type { Client } from '../../types/client';
 import type { SolarKit } from '../../types/solarKit';
+import { RoofPhotoUpload } from './RoofPhotoUpload';
 
 const MONTHS = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
@@ -818,6 +819,8 @@ export function ProfessionalSizingCalculator() {
                     </div>
                   )}
                 </div>
+
+                <RoofPhotoUpload clientId={selectedClient?.id ?? null} />
               </section>
             )}
 
