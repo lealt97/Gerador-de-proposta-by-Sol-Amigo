@@ -28,15 +28,20 @@ const assertPositive = (value: number, field: string) => {
   }
 };
 
+export function calculateModuleQuantity(requiredPowerKwp: number, modulePowerW: number) {
+  assertPositive(requiredPowerKwp, 'Potência necessária');
+  assertPositive(modulePowerW, 'Potência do módulo');
+
+  return Math.ceil((requiredPowerKwp * 1000) / modulePowerW);
+}
+
 export function calculateModuleSizing(input: ModuleSizingInput): ModuleSizingResult {
-  assertPositive(input.requiredPowerKwp, 'Potência necessária');
-  assertPositive(input.modulePowerW, 'Potência do módulo');
+  const moduleQuantity = calculateModuleQuantity(input.requiredPowerKwp, input.modulePowerW);
   assertPositive(input.moduleWidthM, 'Largura do módulo');
   assertPositive(input.moduleHeightM, 'Altura do módulo');
   assertPositive(input.roofWidthM, 'Largura útil do telhado');
   assertPositive(input.roofHeightM, 'Altura útil do telhado');
 
-  const moduleQuantity = Math.ceil((input.requiredPowerKwp * 1000) / input.modulePowerW);
   const installedPowerKwp = (moduleQuantity * input.modulePowerW) / 1000;
   const moduleAreaM2 = input.moduleWidthM * input.moduleHeightM;
   const totalModuleAreaM2 = moduleAreaM2 * moduleQuantity;
