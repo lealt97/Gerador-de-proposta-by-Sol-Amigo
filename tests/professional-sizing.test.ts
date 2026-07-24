@@ -11,6 +11,7 @@ const createInput = (overrides: Partial<ProfessionalSizingInput> = {}): Professi
   connectionType: 'biphase',
   hspDaily: 5.2,
   performanceRatioPercent: 80,
+  generationIncreasePercent: 0,
   selectedKitPowerKwp: 4.95,
   ...overrides,
 });
@@ -29,8 +30,27 @@ test('calcula média, consumo compensável e potência necessária', () => {
   assert.equal(result.availabilityConsumptionKwh, 50);
   assert.equal(result.compensableMonthlyConsumptionKwh, 550);
   assert.equal(result.compensableDailyConsumptionKwh, 18.333);
+  assert.equal(result.generationIncreasePercent, 0);
+  assert.equal(result.targetMonthlyGenerationKwh, 550);
   assert.equal(result.performanceRatio, 0.8);
   assert.equal(result.requiredPowerKwp, 4.407);
+});
+
+test('aplica geração adicional sobre o consumo compensável', () => {
+  const result = calculateProfessionalSizing(createInput({
+    generationIncreasePercent: 10,
+    selectedKitPowerKwp: 4.95,
+  }));
+
+  assert.equal(result.compensableMonthlyConsumptionKwh, 550);
+  assert.equal(result.generationIncreasePercent, 10);
+  assert.equal(result.targetMonthlyGenerationKwh, 605);
+  assert.equal(result.targetDailyGenerationKwh, 20.167);
+  assert.equal(result.requiredPowerKwp, 4.848);
+  assert.equal(result.selectedKitEstimatedMonthlyGenerationKwh, 617.76);
+  assert.equal(result.selectedKitCoveragePercent, 102.11);
+  assert.equal(result.selectedKitEnergyBalanceKwh, 12.76);
+  assert.equal(result.selectedKitIsAdequate, true);
 });
 
 test('kit cadastrado é comparado com a potência calculada sem redimensionar seus equipamentos', () => {
@@ -43,15 +63,19 @@ test('kit cadastrado é comparado com a potência calculada sem redimensionar se
   assert.equal(result.selectedKitIsAdequate, true);
 });
 
-test('identifica kit abaixo da potência necessária', () => {
-  const result = calculateProfessionalSizing(createInput({ selectedKitPowerKwp: 4.4 }));
+test('identifica kit abaixo da meta de geração', () => {
+  const result = calculateProfessionalSizing(createInput({
+    generationIncreasePercent: 20,
+    selectedKitPowerKwp: 4.95,
+  }));
 
-  assert.equal(result.selectedKitEstimatedMonthlyGenerationKwh, 549.12);
+  assert.equal(result.targetMonthlyGenerationKwh, 660);
+  assert.equal(result.requiredPowerKwp, 5.288);
   assert.equal(result.selectedKitIsAdequate, false);
   assert.ok((result.selectedKitEnergyBalanceKwh ?? 0) < 0);
 });
 
-test('rejeita série incompleta, HSP inválida e rendimento fora dos limites matemáticos', () => {
+test('rejeita série incompleta, HSP inválida, rendimento e geração adicional inválidos', () => {
   assert.throws(
     () => calculateProfessionalSizing(createInput({ monthlyConsumptionKwh: [600, 600] })),
     /12 meses/,
@@ -63,5 +87,9 @@ test('rejeita série incompleta, HSP inválida e rendimento fora dos limites mat
   assert.throws(
     () => calculateProfessionalSizing(createInput({ performanceRatioPercent: 101 })),
     /menor ou igual a 100%/,
+  );
+  assert.throws(
+    () => calculateProfessionalSizing(createInput({ generationIncreasePercent: 101 })),
+    /entre 0% e 100%/,
   );
 });
