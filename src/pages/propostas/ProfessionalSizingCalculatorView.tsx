@@ -53,6 +53,7 @@ const STEPS = [
   { id: 'client', title: 'Cliente' },
   { id: 'consumption', title: 'Consumo' },
   { id: 'irradiation', title: 'HSP e meta de geração' },
+  { id: 'modules', title: 'Quantidade de módulos e área do telhado' },
   { id: 'kit', title: 'Kit e resultado' },
 ] as const;
 
@@ -344,7 +345,9 @@ export function ProfessionalSizingCalculator() {
         toast.error('Informe uma geração adicional entre 0% e 100%.');
         return false;
       }
+    }
 
+    if (currentStep === 3) {
       const moduleFields = [
         { value: parseNumber(modulePowerW), message: 'Informe a potência do módulo em Wp.' },
         { value: parseNumber(moduleWidthM), message: 'Informe a largura do módulo em metros.' },
@@ -359,7 +362,7 @@ export function ProfessionalSizingCalculator() {
       }
     }
 
-    if (currentStep === 3 && !selectedKit) {
+    if (currentStep === 4 && !selectedKit) {
       toast.error('Selecione um kit on-grid cadastrado.');
       return false;
     }
@@ -746,15 +749,20 @@ export function ProfessionalSizingCalculator() {
                   </div>
                 )}
 
-                <div className="rounded-xl border border-brand-border bg-brand-gray/30 p-5">
-                  <div>
-                    <h3 className="font-bold text-brand-dark">Quantidade de módulos e área do telhado</h3>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                      A quantidade é arredondada para cima. A verificação compara a área total dos módulos com a área útil informada.
-                    </p>
-                  </div>
+              </section>
+            )}
 
-                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {currentStep === 3 && (
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-bold text-brand-dark">Quantidade de módulos e área do telhado</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Informe a potência e as dimensões do módulo, além da área útil disponível no telhado.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-brand-border bg-brand-gray/30 p-5">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <Field
                       label="Potência do módulo"
                       value={modulePowerW}
@@ -818,7 +826,7 @@ export function ProfessionalSizingCalculator() {
               </section>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 4 && (
               <section className="space-y-6">
                 <div>
                   <h2 className="text-lg font-bold text-brand-dark">Seleção do kit cadastrado</h2>

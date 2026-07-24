@@ -56,3 +56,19 @@ test('o fluxo calcula quantidade de módulos, áreas e status do telhado', async
   assert.match(calculator, /Os módulos cabem na área útil do telhado/);
   assert.match(calculator, /Os módulos não cabem na área útil do telhado/);
 });
+
+
+test('a quantidade de módulos e área do telhado ocupa a aba 4 separada', async () => {
+  const calculator = await readFile(CALCULATOR_VIEW, 'utf8');
+
+  assert.match(
+    calculator,
+    /id: 'irradiation'[\s\S]*id: 'modules', title: 'Quantidade de módulos e área do telhado'[\s\S]*id: 'kit'/,
+  );
+  assert.match(
+    calculator,
+    /currentStep === 2[\s\S]*HSP, rendimento e meta de geração[\s\S]*currentStep === 3[\s\S]*Quantidade de módulos e área do telhado[\s\S]*currentStep === 4[\s\S]*Seleção do kit cadastrado/,
+  );
+  assert.match(calculator, /if \(currentStep === 3\) \{[\s\S]*const moduleFields = \[/);
+  assert.match(calculator, /if \(currentStep === 4 && !selectedKit\)/);
+});
