@@ -73,6 +73,7 @@ export default function App() {
                 <Route path="clientes/:id/editar" element={<ClientForm />} />
                 <Route path="propostas" element={<ProposalList />} />
                 <Route path="propostas/nova" element={<ProfessionalSizingCalculator />} />
+                <Route path="propostas/:id/continuar" element={<ProfessionalSizingCalculator />} />
                 <Route path="propostas/:id" element={<ProposalDetailsRoute />} />
                 <Route path="propostas/:id/editar" element={null} />
                 <Route path="kits-solares" element={<SolarKitCatalog />} />
