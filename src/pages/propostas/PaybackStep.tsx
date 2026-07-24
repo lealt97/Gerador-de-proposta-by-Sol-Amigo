@@ -435,19 +435,44 @@ export function PaybackStep({
               <div className="mt-5 h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={result.chartData} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="year" interval={4} tickFormatter={(year) => `${year}`} />
-                    <YAxis width={76} tickFormatter={(value) => `R$ ${Math.round(Number(value) / 1000)}k`} />
+                    <CartesianGrid
+                      stroke="var(--color-brand-border)"
+                      strokeDasharray="3 3"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="year"
+                      interval={4}
+                      stroke="var(--color-slate-500)"
+                      tick={{ fill: 'var(--color-slate-500)' }}
+                      tickFormatter={(year) => `${year}`}
+                    />
+                    <YAxis
+                      width={76}
+                      stroke="var(--color-slate-500)"
+                      tick={{ fill: 'var(--color-slate-500)' }}
+                      tickFormatter={(value) => `R$ ${Math.round(Number(value) / 1000)}k`}
+                    />
                     <Tooltip
+                      cursor={{ fill: 'var(--color-gray-100)' }}
+                      contentStyle={{
+                        backgroundColor: 'var(--color-brand-surface)',
+                        borderColor: 'var(--color-brand-border)',
+                        color: 'var(--color-brand-dark)',
+                      }}
+                      labelStyle={{ color: 'var(--color-brand-dark)' }}
+                      itemStyle={{ color: 'var(--color-brand-dark)' }}
                       labelFormatter={(year) => `Ano ${year}`}
                       formatter={(value) => [currency.format(Number(value)), 'Saldo acumulado']}
                     />
-                    <ReferenceLine y={0} stroke="#64748b" />
-                    <Bar dataKey="cumulativeBalance" radius={[5, 5, 0, 0]}>
+                    <ReferenceLine y={0} stroke="var(--color-slate-500)" />
+                    <Bar dataKey="cumulativeBalance" radius={0}>
                       {result.chartData.map((point) => (
                         <Cell
                           key={point.year}
-                          fill={point.cumulativeBalance >= 0 ? '#0076DD' : '#ef4444'}
+                          fill={point.cumulativeBalance >= 0
+                            ? 'var(--color-brand-blue)'
+                            : 'var(--color-brand-yellow)'}
                         />
                       ))}
                     </Bar>

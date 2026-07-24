@@ -30,7 +30,13 @@ test('a etapa contém tarifa, tributos, margem editável, custos e gráfico vert
   assert.match(payback, /Configurações da Conta > Preferências Comerciais/);
   assert.match(payback, /Adicionar custo/);
   assert.match(payback, /<BarChart/);
-  assert.match(payback, /<Bar dataKey="cumulativeBalance"/);
+  assert.match(payback, /<Bar dataKey="cumulativeBalance" radius=\{0\}/);
+  assert.match(payback, /var\(--color-brand-blue\)/);
+  assert.match(payback, /var\(--color-brand-yellow\)/);
+  assert.match(payback, /var\(--color-brand-border\)/);
+  assert.match(payback, /var\(--color-brand-surface\)/);
+  assert.doesNotMatch(payback, /radius=\{\[5, 5, 0, 0\]\}/);
+  assert.doesNotMatch(payback, /fill=\{point\.cumulativeBalance >= 0 \? '#0076DD' : '#ef4444'\}/);
 });
 
 test('a etapa apresenta todas as classificações solicitadas', async () => {
