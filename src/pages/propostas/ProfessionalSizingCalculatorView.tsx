@@ -580,7 +580,10 @@ export function ProfessionalSizingCalculator() {
         proposalId: draftId,
         flowStep: STEPS.length - 1,
         flowState,
-        summary: buildDraftSummary(),
+        summary: {
+          ...buildDraftSummary(),
+          title: selectedClient ? `Proposta solar — ${selectedClient.name}` : undefined,
+        },
       });
       toast.success('Proposta concluída e salva.');
       navigate(`/propostas/${draftId}`, { replace: true });

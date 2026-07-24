@@ -485,3 +485,46 @@ END;
 $$;
 
 
+
+
+-- 8. RASCUNHOS PERSISTENTES DO FLUXO DE PROPOSTA
+ALTER TABLE public.proposals
+  ADD COLUMN IF NOT EXISTS flow_step SMALLINT,
+  ADD COLUMN IF NOT EXISTS flow_state JSONB,
+  ADD COLUMN IF NOT EXISTS flow_version INTEGER,
+  ADD COLUMN IF NOT EXISTS flow_completed BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS flow_last_saved_at TIMESTAMP WITH TIME ZONE;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.proposals'::regclass
+      AND conname = 'proposals_flow_step_range'
+  ) THEN
+    ALTER TABLE public.proposals
+      ADD CONSTRAINT proposals_flow_step_range
+      CHECK (flow_step IS NULL OR flow_step BETWEEN 0 AND 6);
+  END IF;
+END
+$$;
+
+CREATE INDEX IF NOT EXISTS proposals_active_flow_drafts_idx
+  ON public.proposals (user_id, client_id, updated_at DESC)
+  WHERE status = 'draft'
+    AND flow_completed = false
+    AND flow_state IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS proposals_one_active_flow_draft_per_client_uidx
+  ON public.proposals (user_id, client_id)
+  WHERE status = 'draft'
+    AND flow_completed = false
+    AND flow_state IS NOT NULL;
+
+DROP POLICY IF EXISTS "Usuário pode editar apenas suas propostas" ON public.proposals;
+CREATE POLICY "Usuário pode editar apenas suas propostas"
+  ON public.proposals
+  FOR UPDATE
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);

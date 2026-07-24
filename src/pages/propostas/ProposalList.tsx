@@ -10,7 +10,6 @@ import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';
 import { formatDate } from '../../lib/utils';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
-import { PENDING_PROPOSAL_STATUSES } from '../../lib/proposals/status';
 import { getProposalContinuePath, isActiveProposalFlowDraft } from '../../lib/proposals/flow';
 
 export function ProposalList() {
@@ -50,7 +49,7 @@ export function ProposalList() {
         || proposal.client?.name.toLowerCase().includes(term);
       const matchStatus = statusFilter
         ? statusFilter === 'pending_like'
-          ? PENDING_PROPOSAL_STATUSES.includes(proposal.status as (typeof PENDING_PROPOSAL_STATUSES)[number])
+          ? proposal.status === 'pending'
           : proposal.status === statusFilter
         : true;
       return Boolean(matchSearch && matchStatus);

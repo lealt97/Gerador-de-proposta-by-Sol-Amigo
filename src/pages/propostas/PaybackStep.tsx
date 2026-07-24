@@ -60,6 +60,7 @@ const STATUS_STYLES: Record<PaybackStatus, string> = {
   unfeasible: 'border-red-200 bg-red-50 text-red-700',
 };
 
+type AdditionalCostDraft = ProposalDraftPaybackForm['additionalCosts'][number];
 type PaybackFormState = ProposalDraftPaybackForm;
 
 const createCost = (): AdditionalCostDraft => ({
@@ -189,7 +190,7 @@ export function PaybackStep({
     return () => {
       active = false;
     };
-  }, [storageKey, user?.id]);
+  }, [initialForm, storageKey, user?.id]);
 
   useEffect(() => {
     if (!hydrated) return;

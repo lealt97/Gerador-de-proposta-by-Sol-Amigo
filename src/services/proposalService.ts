@@ -139,7 +139,13 @@ async function createOrResumeFlowDraft(input: CreateFlowDraftInput) {
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+      const concurrentDraft = await findActiveFlowDraftByClient(input.userId, input.clientId);
+      if (concurrentDraft) return { proposal: concurrentDraft, resumed: true } as const;
+    }
+    throw error;
+  }
   return { proposal: data as Proposal, resumed: false } as const;
 }
 
