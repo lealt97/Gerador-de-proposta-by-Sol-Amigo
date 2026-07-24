@@ -1,3 +1,4 @@
+# Executado uma única vez para aplicar a correção no fluxo principal.
 from pathlib import Path
 
 path = Path('src/pages/propostas/ProfessionalSizingCalculatorView.tsx')
