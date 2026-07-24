@@ -657,31 +657,17 @@ export function ProfessionalSizingCalculator() {
                 </div>
 
                 <div className="rounded-xl border border-brand-border bg-brand-gray/30 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="max-w-md flex-1">
-                      <Field
-                        label="Geração adicional desejada"
-                        value={generationIncreasePercent}
-                        onChange={setGenerationIncreasePercent}
-                        suffix="%"
-                        min={0}
-                        max={100}
-                        step="1"
-                        helper="O percentual é aplicado sobre o consumo compensável. Use 0% quando o cliente não solicitar geração adicional."
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {[0, 10, 20, 30].map((percentage) => (
-                        <Button
-                          key={percentage}
-                          type="button"
-                          variant={generationIncreasePercent === String(percentage) ? 'default' : 'outline'}
-                          onClick={() => setGenerationIncreasePercent(String(percentage))}
-                        >
-                          {percentage}%
-                        </Button>
-                      ))}
-                    </div>
+                  <div className="max-w-md">
+                    <Field
+                      label="Geração adicional desejada"
+                      value={generationIncreasePercent}
+                      onChange={setGenerationIncreasePercent}
+                      suffix="%"
+                      min={0}
+                      max={100}
+                      step="1"
+                      helper="O percentual é aplicado sobre o consumo compensável. Use 0% quando o cliente não solicitar geração adicional."
+                    />
                   </div>
                 </div>
 
