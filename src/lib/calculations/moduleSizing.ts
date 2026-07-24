@@ -3,8 +3,7 @@ export type ModuleSizingInput = {
   modulePowerW: number;
   moduleWidthM: number;
   moduleHeightM: number;
-  roofWidthM: number;
-  roofHeightM: number;
+  roofAreaM2: number;
 };
 
 export type ModuleSizingResult = {
@@ -39,21 +38,19 @@ export function calculateModuleSizing(input: ModuleSizingInput): ModuleSizingRes
   const moduleQuantity = calculateModuleQuantity(input.requiredPowerKwp, input.modulePowerW);
   assertPositive(input.moduleWidthM, 'Largura do módulo');
   assertPositive(input.moduleHeightM, 'Altura do módulo');
-  assertPositive(input.roofWidthM, 'Largura útil do telhado');
-  assertPositive(input.roofHeightM, 'Altura útil do telhado');
+  assertPositive(input.roofAreaM2, 'Área do telhado');
 
   const installedPowerKwp = (moduleQuantity * input.modulePowerW) / 1000;
   const moduleAreaM2 = input.moduleWidthM * input.moduleHeightM;
   const totalModuleAreaM2 = moduleAreaM2 * moduleQuantity;
-  const roofAreaM2 = input.roofWidthM * input.roofHeightM;
-  const availableAreaBalanceM2 = roofAreaM2 - totalModuleAreaM2;
+  const availableAreaBalanceM2 = input.roofAreaM2 - totalModuleAreaM2;
 
   return {
     moduleQuantity,
     installedPowerKwp: round(installedPowerKwp, 3),
     moduleAreaM2: round(moduleAreaM2, 3),
     totalModuleAreaM2: round(totalModuleAreaM2),
-    roofAreaM2: round(roofAreaM2),
+    roofAreaM2: round(input.roofAreaM2),
     availableAreaBalanceM2: round(availableAreaBalanceM2),
     modulesFitRoof: availableAreaBalanceM2 >= 0,
   };
